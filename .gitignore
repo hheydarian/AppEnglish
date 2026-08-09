@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# capacitor (native android/ios projects)
+/android/
+/ios/
+/android/app/release/
+*.apk
+*.aab
