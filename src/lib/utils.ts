@@ -63,3 +63,31 @@ export function clamp(value: number, min: number, max: number): number {
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Quiz string normalization                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Normalize a user/correct answer before comparison so that punctuation,
+ * extra whitespace, letter case, and Persian/Arabic digit + character
+ * differences never mark a correct answer wrong.
+ *
+ * Used by the quiz step to compare "A blue door." vs "a blue door" as equal.
+ */
+export function normalizeText(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    // unify Arabic/Persian characters
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, "") // Arabic diacritics + tatweel
+    .replace(/\u06CC/g, "\u064A") // Persian Yeh → Arabic Yeh
+    .replace(/\u06A9/g, "\u0643") // Persian Keheh → Arabic Kaf
+    .replace(/\u06AF/g, "\u06AF") // Gaf stays
+    .replace(/\u0698/g, "\u0698") // Jeh stays
+    // strip punctuation
+    .replace(/[.,!?;:"'`(){}\[\]\\\/\-—_]/g, "")
+    // collapse whitespace
+    .replace(/\s+/g, " ")
+    .trim();
+}

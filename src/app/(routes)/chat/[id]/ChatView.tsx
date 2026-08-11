@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Send } from "lucide-react";
+import { ArrowRight, Send, Gauge, RotateCcw } from "lucide-react";
 import { motion } from "framer-motion";
-import { getScenarioById } from "@/data/scenarios";
+import { resolveChatScenario } from "@/data/lesson-scenarios";
 import { useChatStore } from "@/store/chatStore";
 import { useChat } from "@/hooks/useChat";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -23,7 +23,9 @@ import {
 
 export default function ChatView({ scenarioId }: { scenarioId: string }) {
   const router = useRouter();
-  const scenario = useMemo(() => getScenarioById(scenarioId), [scenarioId]);
+  // Resolve BOTH real scenarios (cafe-ordering, casual-chat, ...) AND
+  // lesson-specific A0 chats (/chat/a0-1-3, /chat/a0-2-2, ...).
+  const scenario = useMemo(() => resolveChatScenario(scenarioId), [scenarioId]);
 
   /* ---- store ---- */
   const session = useChatStore((s) => s.session);
@@ -36,6 +38,8 @@ export default function ChatView({ scenarioId }: { scenarioId: string }) {
   const proficiency = useSettingsStore((s) => s.proficiency);
   const accent = useSettingsStore((s) => s.accent);
   const ttsRate = useSettingsStore((s) => s.ttsRate);
+  const setAccent = useSettingsStore((s) => s.setAccent);
+  const setTtsRate = useSettingsStore((s) => s.setTtsRate);
   const locale = ACCENT_TO_LOCALE[accent];
   // User's chosen proficiency overrides the scenario's default difficulty,
   // so the AI adapts its language to the learner's actual level.
@@ -48,12 +52,33 @@ export default function ChatView({ scenarioId }: { scenarioId: string }) {
     language: "en",
   });
 
-  /* ---- TTS ---- */
+  /* ---- TTS (normal + a slow instance for the "Replay slow" button) ---- */
   const tts = useTTS({ lang: locale, rate: ttsRate });
+  const ttsSlow = useTTS({ lang: locale, rate: Math.max(0.5, ttsRate * 0.6) });
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(
     null
   );
-  useEffect(() => setSpeaking(tts.isSpeaking), [tts.isSpeaking, setSpeaking]);
+  useEffect(() => setSpeaking(tts.isSpeaking || ttsSlow.isSpeaking), [
+    tts.isSpeaking,
+    ttsSlow.isSpeaking,
+    setSpeaking,
+  ]);
+
+  /** The most recent AI message text — used by the "Replay slow" button. */
+  const lastAssistantText = useMemo(() => {
+    const msgs = session?.messages ?? [];
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === "assistant") return msgs[i].content;
+    }
+    return null;
+  }, [session?.messages]);
+
+  /** Replay the last AI reply at a slower speed. */
+  const replaySlow = () => {
+    if (!lastAssistantText) return;
+    tts.cancel();
+    ttsSlow.speak(lastAssistantText);
+  };
 
   const handleSpeak = (text: string, messageId: string) => {
     if (speakingMessageId === messageId && tts.isSpeaking) {
@@ -76,18 +101,14 @@ export default function ChatView({ scenarioId }: { scenarioId: string }) {
     setDraft("");
   };
 
-  /* ---- voice input ---- */
+  /* ---- voice input ----
+   * Speech is transcribed LIVE into the input box (so the user sees what was
+   * heard and can edit it) and is NOT auto-sent. The user reviews the text
+   * then taps Send like a normal message. */
   const recognition = useSpeechRecognition({
     lang: locale,
-    onResult: (text, isFinal) => {
+    onResult: (text) => {
       setDraft(text);
-      if (isFinal) {
-        // Auto-send once recognition finalizes.
-        setTimeout(() => {
-          sendMessage(text, "voice");
-          setDraft("");
-        }, 150);
-      }
     },
     onEnd: () => setRecording(false),
   });
@@ -160,9 +181,29 @@ export default function ChatView({ scenarioId }: { scenarioId: string }) {
         >
           <ArrowRight className="size-5" />
         </button>
-        <div className="flex size-9 items-center justify-center rounded-full bg-card text-xl shadow-sm ring-1 ring-border">
+        <motion.div
+          className="relative flex size-9 items-center justify-center rounded-full bg-card text-xl shadow-sm ring-1 ring-border"
+          animate={
+            tts.isSpeaking || ttsSlow.isSpeaking
+              ? { scale: [1, 1.08, 1] }
+              : { scale: 1 }
+          }
+          transition={
+            tts.isSpeaking || ttsSlow.isSpeaking
+              ? { duration: 0.7, repeat: Infinity, ease: "easeInOut" }
+              : { duration: 0.2 }
+          }
+        >
           {scenario.role.avatar}
-        </div>
+          {(tts.isSpeaking || ttsSlow.isSpeaking) && (
+            <motion.span
+              className="absolute inset-0 rounded-full bg-brand/40"
+              initial={{ scale: 1, opacity: 0.6 }}
+              animate={{ scale: 1.8, opacity: 0 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "easeOut" }}
+            />
+          )}
+        </motion.div>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-sm font-semibold">{scenario.title}</h1>
           <p className="truncate text-xs text-muted-foreground">
@@ -171,6 +212,43 @@ export default function ChatView({ scenarioId }: { scenarioId: string }) {
         </div>
         <Badge variant="secondary">{effectiveLevel}</Badge>
       </header>
+
+      {/* Voice control toolbar */}
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2 text-xs">
+        {/* TTS rate cycle: 0.75 → 1.0 → 1.25 → back */}
+        <button
+          onClick={() => {
+            const next =
+              ttsRate >= 1.2 ? 0.75 : ttsRate >= 0.95 ? 1.25 : 1.0;
+            setTtsRate(next);
+          }}
+          className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 transition-colors hover:bg-muted"
+          aria-label="سرعت پخش صدا"
+        >
+          <Gauge className="size-3.5" />
+          {ttsRate.toFixed(2)}×
+        </button>
+
+        {/* Accent toggle US/UK */}
+        <button
+          onClick={() => setAccent(accent === "us" ? "uk" : "us")}
+          className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 transition-colors hover:bg-muted"
+          aria-label="لهجه"
+        >
+          {accent === "us" ? "🇺🇸 US" : "🇬🇧 UK"}
+        </button>
+
+        {/* Replay last AI message slowly */}
+        <button
+          onClick={replaySlow}
+          disabled={!lastAssistantText}
+          className="ms-auto flex items-center gap-1 rounded-full border border-brand/30 bg-brand-muted/40 px-2.5 py-1 font-medium text-brand transition-colors hover:bg-brand-muted/70 disabled:opacity-40"
+          aria-label="پخش آهسته آخرین پیام"
+        >
+          <RotateCcw className="size-3.5" />
+          پخش آهسته
+        </button>
+      </div>
 
       {/* Messages */}
       <MessageList

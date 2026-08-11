@@ -58,6 +58,7 @@ export default function RootLayout({
     <html
       lang="fa"
       dir="rtl"
+      data-scroll-behavior="smooth"
       className={`${vazirmatn.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >

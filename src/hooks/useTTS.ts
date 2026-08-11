@@ -2,6 +2,36 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
+/* -------------------------------------------------------------------------- */
+/*  Speech preparation — make letters & short tokens pronounce distinctly     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Normalize text before sending it to the speech synthesizer so that:
+ *  - Paired letter forms like "A a", "Bb", "B b" are spoken as two separate
+ *    letters with a natural pause ("A ... a") instead of gluing into a slur.
+ *  - Single capital letters (used alone as alphabet lessons) are spelled out.
+ *  - Short token runs (e.g. "A E I O U") get commas between them.
+ *
+ * This is essential for A0 alphabet lessons, where "A a" otherwise sounds
+ * like a single nonsense syllable.
+ */
+export function prepareForSpeech(text: string): string {
+  let out = text.trim();
+  if (!out) return out;
+
+  // 1) "A a" / "A  a" (big-space-small) → "A, a"  — most common A0 pattern.
+  out = out.replace(/([A-Z])\s+([a-z])/g, "$1, $2");
+  // 2) "Bb" / "Cc" (big immediately followed by small) → "B, b".
+  out = out.replace(/([A-Z])([a-z])(?![a-z])/g, "$1, $2");
+  // 3) Sequences of single capital letters like "A E I O U" → "A, E, I, O, U".
+  out = out.replace(/([A-Z])(\s+)(?=[A-Z](?:\s|$))/g, "$1,$2");
+  // 4) Collapse double commas/whitespace created by the steps above.
+  out = out.replace(/,\s*,/g, ",").replace(/\s+/g, " ").trim();
+
+  return out;
+}
+
 export interface UseTTSOptions {
   /** BCP-47 language tag, e.g. "en-US". */
   lang?: string;
@@ -55,10 +85,13 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
       if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
       if (!text.trim()) return;
 
+      // Prepare text so alphabet letters & short tokens are spoken distinctly.
+      const prepared = prepareForSpeech(text);
+
       const synth = window.speechSynthesis;
       synth.cancel(); // interrupt anything currently playing
 
-      const utterance = new SpeechSynthesisUtterance(text);
+      const utterance = new SpeechSynthesisUtterance(prepared);
       utterance.lang = lang;
       utterance.rate = rate;
       utterance.pitch = pitch;

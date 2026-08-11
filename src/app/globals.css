@@ -144,6 +144,18 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/*
+ * Smooth scrolling is opted-in only when the user hasn't requested reduced
+ * motion. This silences the "avoid scroll-behavior: smooth without a reduced-
+ * motion guard" warning while keeping the behavior for users who want it.
+ * The `data-scroll-behavior="smooth"` attribute on <html> (set in layout.tsx)
+ * is the explicit opt-in signal.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-scroll-behavior="smooth"] {
     scroll-behavior: smooth;
   }
 }

@@ -7,7 +7,9 @@ import type {
 } from "@/types";
 import { buildSystemPrompt } from "@/config/ai";
 import { getScenarioById } from "@/data/scenarios";
+import { resolveChatScenario } from "@/data/lesson-scenarios";
 import { uid } from "@/lib/utils";
+import { buildSmartReply } from "./smart-reply";
 import type {
   ChatRequestBody,
   ChatRequestMessage,
@@ -30,7 +32,8 @@ import type {
 export async function generateReplyClient(
   body: ChatRequestBody
 ): Promise<ChatResponseData> {
-  const scenario = getScenarioById(body.scenarioId);
+  // Resolve BOTH base scenarios AND lesson-specific A0 chats.
+  const scenario = resolveChatScenario(body.scenarioId) ?? getScenarioById(body.scenarioId);
   if (!scenario) {
     throw new Error(`Unknown scenario: ${body.scenarioId}`);
   }
@@ -53,7 +56,11 @@ export async function generateReplyClient(
     }
   }
 
-  return mockReply(scenario, lastUserMsg?.content ?? "");
+  return buildSmartReply({
+    scenario,
+    history: body.messages,
+    userText: lastUserMsg?.content ?? "",
+  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -139,103 +146,6 @@ function parseProviderJson(raw: string): ChatResponseData {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Deterministic mock (kept in sync with lib/ai/server.ts)                   */
+/*  Content-aware mock lives in ./smart-reply (shared with the server build)  */
 /* -------------------------------------------------------------------------- */
 
-function mockReply(scenario: Scenario, userText: string): ChatResponseData {
-  const reply = pickMockReply(scenario, userText);
-  const feedback = synthesizeMockFeedback(userText);
-  return { reply, feedback, mock: true };
-}
-
-const MOCK_REPLIES: Record<string, string[]> = {
-  "cafe-ordering": [
-    "Great choice! What size would you like — small, medium, or large?",
-    "Sure thing! Is that to stay or to go?",
-    "Awesome. Would you like to add a pastry with that?",
-    "That'll be four dollars fifty, please. How would you like to pay?",
-  ],
-  "job-interview": [
-    "Thanks for sharing. Can you tell me about a challenge you faced and how you handled it?",
-    "Interesting. Why do you want to work for our company specifically?",
-    "Good. Where do you see yourself in five years?",
-    "Thank you. Do you have any questions for me about the role?",
-  ],
-  "airport-check-in": [
-    "Great. How many bags are you checking in today?",
-    "Perfect. Would you prefer a window seat or an aisle seat?",
-    "All set. Your gate is B12, and boarding starts at 3:40 PM.",
-    "You're welcome! Have a safe flight.",
-  ],
-  "casual-chat": [
-    "Oh nice! I love that too. How long have you been into it?",
-    "That sounds really fun. What did you enjoy most about it?",
-    "Cool! Do you have any plans for next weekend then?",
-    "Haha, totally! We should definitely do that sometime.",
-  ],
-};
-
-function pickMockReply(scenario: Scenario, userText: string): string {
-  const pool = MOCK_REPLIES[scenario.id] ?? [
-    "That's interesting — tell me more!",
-    "I see. Could you go into a bit more detail?",
-  ];
-  const idx = userText.length % pool.length;
-  return pool[idx];
-}
-
-function synthesizeMockFeedback(userText: string): Feedback[] {
-  const feedback: Feedback[] = [];
-  const lower = userText.toLowerCase();
-
-  const checks: Array<{
-    test: boolean;
-    original: string;
-    suggestion: string;
-    explanation: string;
-    type: Feedback["type"];
-    severity: Feedback["severity"];
-  }> = [
-    {
-      test: /\bi\s+want\b/.test(lower),
-      original: "I want",
-      suggestion: "I'd like",
-      explanation:
-        "برای سفارش دادن، «I'd like» مؤدبانه‌تر و طبیعی‌تر از «I want» است.",
-      type: "style",
-      severity: "suggestion",
-    },
-    {
-      test: /\bhow much it\b|\bhow much it cost\b/.test(lower),
-      original: "how much it cost",
-      suggestion: "how much does it cost",
-      explanation:
-        "برای سوال از فعل اصلی، به کمکی «does» نیاز داریم: «how much does it cost?»",
-      type: "grammar",
-      severity: "correction",
-    },
-    {
-      test: /\bi\b/.test(userText) && !/\bI\b/.test(userText),
-      original: "i",
-      suggestion: "I",
-      explanation: "ضمیر «I» (من) در انگلیسی همیشه بزرگ نوشته می‌شود.",
-      type: "grammar",
-      severity: "correction",
-    },
-  ];
-
-  for (const c of checks) {
-    if (c.test) {
-      feedback.push({
-        original: c.original,
-        suggestion: c.suggestion,
-        explanation: c.explanation,
-        type: c.type,
-        severity: c.severity,
-        id: uid("fb"),
-      });
-    }
-  }
-
-  return feedback;
-}

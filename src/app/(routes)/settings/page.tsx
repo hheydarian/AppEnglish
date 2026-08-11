@@ -11,7 +11,7 @@ import {
   Play,
   Trash2,
 } from "lucide-react";
-import { AppShell } from "@/components/layout";
+import { DashboardLayout } from "@/components/layout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn, toPersianDigits } from "@/lib/utils";
@@ -52,7 +52,7 @@ export default function SettingsPage() {
   });
 
   return (
-    <AppShell>
+    <DashboardLayout>
       <header className="pt-10 pb-4">
         <h1 className="text-2xl font-bold">تنظیمات</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -196,7 +196,7 @@ export default function SettingsPage() {
       <p className="pb-4 pt-2 text-center text-[11px] text-muted-foreground">
         SpeakUp — نسخه ۰.۱
       </p>
-    </AppShell>
+    </DashboardLayout>
   );
 }
 

@@ -212,3 +212,182 @@ export interface ChatSession {
   status: SessionStatus;
   mode: MessageMode;
 }
+
+/* ========================================================================== */
+/*  Curriculum / Learning Tree                                                 */
+/* ========================================================================== */
+
+/** CEFR levels plus A0 for absolute beginners. Ordered low → high. */
+export type CurriculumLevel = 'A0' | CEFRLevel;
+
+/** Type of a teachable unit in the learning tree. */
+export type LessonType =
+  | 'alphabet'      // sounds, letters (A0)
+  | 'vocab'         // vocabulary sets
+  | 'phrase'        // common phrases / dialogs
+  | 'grammar'       // a grammar point
+  | 'roleplay'      // a scenario conversation (links to a Scenario)
+  | 'challenge';    // a mixed skill challenge
+
+/** One node in the learning tree. */
+export interface Lesson {
+  id: string;
+  title: string;
+  /** Short, motivating Persian description. */
+  description: string;
+  type: LessonType;
+  level: CurriculumLevel;
+  /** Lucide icon name shown on the card. */
+  icon: string;
+  /** For roleplay lessons: the linked scenario id (starts a chat). */
+  scenarioId?: string;
+  /** Estimated minutes to complete. */
+  estimatedMinutes: number;
+  /** True when the lesson is locked until prerequisites are done. */
+  locked?: boolean;
+}
+
+/** A stage groups lessons by level (A0, A1, ...). */
+export interface CurriculumStage {
+  level: CurriculumLevel;
+  /** Persian label, e.g. «صفر مطلق». */
+  label: string;
+  /** One-line motivating subtitle. */
+  subtitle: string;
+  /** Lucide icon name for the stage badge. */
+  icon: string;
+  /** Accent color token name used on the stage header. */
+  accent: 'sky' | 'emerald' | 'amber' | 'violet' | 'rose' | 'cyan';
+  /** Optional grouping into themed Units (used by A0's 4 units). */
+  units?: CurriculumUnit[];
+  lessons: Lesson[];
+}
+
+/** A themed unit within a stage (e.g. "الفبا و احوالپرسی"). */
+export interface CurriculumUnit {
+  id: string;
+  /** Persian unit title. */
+  title: string;
+  /** Short motivating Persian subtitle. */
+  subtitle: string;
+  /** Lucide icon name. */
+  icon: string;
+  lessons: Lesson[];
+}
+
+/* ========================================================================== */
+/*  Interactive Lesson content (the 4-step flow)                              */
+/* ========================================================================== */
+
+/** A vocabulary flashcard with audio + Persian meaning + example. */
+export interface VocabCard {
+  /** The English word/phrase to learn. */
+  term: string;
+  /** Phonetic spelling hint, e.g. "hə-ˈlō". */
+  phonetic?: string;
+  /** Persian meaning. */
+  meaning: string;
+  /** Short English example sentence. */
+  example: string;
+  /** Lucide icon or emoji for the card face. */
+  emoji?: string;
+}
+
+/** A one-line, friendly grammar explanation. */
+export interface GrammarByte {
+  /** The pattern/rule, shown prominently. e.g. "I am + name". */
+  rule: string;
+  /** One-line friendly Persian explanation. */
+  explanation: string;
+  /** 1–3 example sentences showing the rule. */
+  examples: string[];
+}
+
+/** Type of an interactive practice question. */
+export type QuizKind = 'multiple-choice' | 'word-order';
+
+/** A single interactive practice question. */
+export interface QuizQuestion {
+  id: string;
+  kind: QuizKind;
+  /** The prompt in Persian. */
+  prompt: string;
+  /** The English phrase shown when needed. */
+  englishHint?: string;
+  /** For multiple-choice: the options; for word-order: the words to arrange. */
+  options?: string[];
+  /** For word-order: shuffled words. */
+  words?: string[];
+  /** Index of the correct option (multiple-choice). */
+  correctIndex?: number;
+  /** The correct arranged sentence (word-order). */
+  correctSentence?: string;
+  /** Friendly Persian explanation shown after answering. */
+  explain: string;
+}
+
+/** The full interactive content of a non-roleplay lesson. */
+export interface LessonContent {
+  lessonId: string;
+  /** Step 1: Vocabulary flashcards. */
+  vocabulary: VocabCard[];
+  /** Step 2: A grammar micro-explanation. */
+  grammar: GrammarByte;
+  /** Step 3: Practice questions. */
+  quiz: QuizQuestion[];
+  /** Step 4: a roleplay scenario id for the live AI practice (optional). */
+  practiceScenarioId?: string;
+  /** Optional free-text prompt used for a short AI practice turn. */
+  practicePrompt?: string;
+}
+
+/** Names of the 4 steps in the lesson flow. */
+export type LessonStep = 'vocab' | 'grammar' | 'quiz' | 'practice';
+
+/* ========================================================================== */
+/*  Podcasts / Audio Stories (Listening practice)                             */
+/* ========================================================================== */
+
+/** A single sentence in a story's transcript. */
+export interface TranscriptLine {
+  /** The English sentence. */
+  en: string;
+  /** Persian translation. */
+  fa: string;
+}
+
+/** A multiple-choice comprehension question about a story. */
+export interface StoryQuizQuestion {
+  id: string;
+  /** The prompt in Persian. */
+  prompt: string;
+  options: string[];
+  /** Index of the correct option. */
+  correctIndex: number;
+  /** Friendly Persian explanation. */
+  explain: string;
+}
+
+/** A leveled audio story for the Podcasts section. */
+export interface Story {
+  id: string;
+  /** Persian title shown on the card. */
+  title: string;
+  /** One-line Persian hook. */
+  description: string;
+  /** Lucide icon or emoji. */
+  emoji: string;
+  /** CEFR level the story is graded to. */
+  level: CurriculumLevel;
+  /** Rough minutes to listen. */
+  estimatedMinutes: number;
+  /** The story transcript, sentence-by-sentence. */
+  lines: TranscriptLine[];
+  /** Comprehension quiz at the end (3 questions). */
+  quiz: StoryQuizQuestion[];
+  /** Accent tag for discoverability. */
+  tags: string[];
+}
+
+
+

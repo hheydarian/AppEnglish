@@ -1,59 +1,199 @@
-import { AppShell } from "@/components/layout";
-import { Sparkles } from "lucide-react";
-import { SCENARIOS } from "@/data/scenarios";
-import { Badge } from "@/components/ui/badge";
+"use client";
+
+import { motion } from "framer-motion";
+import { Sparkles, Flame, Trophy, ArrowLeft, BookOpen, Headphones } from "lucide-react";
+import Link from "next/link";
+import { DashboardLayout } from "@/components/layout";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { Icon } from "@/components/ui/Icon";
+import { LessonCard } from "@/components/curriculum/LessonCard";
+import { CURRICULUM, TOTAL_LESSONS } from "@/data/curriculum";
+import { useUserStore } from "@/store/userStore";
+import { cn, toPersianDigits } from "@/lib/utils";
 
 export default function Home() {
+  const streak = useUserStore((s) => s.streakDays);
+  const points = useUserStore((s) => s.totalPoints);
+  const lessonsDone = useUserStore((s) => s.completedScenarios.length);
+
   return (
-    <AppShell>
-      {/* Header */}
-      <header className="flex items-center justify-between pt-10 pb-6">
-        <div>
-          <p className="text-sm text-muted-foreground">سلام! 👋</p>
-          <h1 className="text-2xl font-bold text-gradient-brand">SpeakUp</h1>
+    <DashboardLayout>
+      {/* ============ HERO ============ */}
+      <motion.header
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="pt-10 pb-6"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">سلام رفیق! 👋</p>
+            <h1 className="mt-1 text-3xl font-extrabold text-gradient-brand sm:text-4xl">
+              بیا انگلیسی رو زنده کنیم!
+            </h1>
+            <p className="mt-2 max-w-md text-sm text-muted-foreground">
+              از الفبا تا مکالمه‌ی حرفه‌ای — قدم‌به‌قدم، با یه هوش مصنوعی که مثل
+              دوست بهت یاد می‌ده. آماده‌ای؟
+            </p>
+          </div>
+          <motion.div
+            animate={{ rotate: [0, 8, -8, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-cyan-500 text-white shadow-xl shadow-brand/30"
+          >
+            <Sparkles className="size-7" />
+          </motion.div>
         </div>
-        <div className="flex size-10 items-center justify-center rounded-full bg-brand-muted text-brand">
-          <Sparkles className="size-5" />
+
+        {/* Quick stat chips */}
+        <div className="mt-5 grid grid-cols-3 gap-3">
+          <StatChip icon={Flame} label="روز زنده" value={streak} accent="text-orange-300" />
+          <StatChip icon={Trophy} label="امتیاز" value={points} accent="text-amber-300" />
+          <StatChip icon={BookOpen} label="درس انجام‌شده" value={lessonsDone} accent="text-emerald-300" />
         </div>
-      </header>
+      </motion.header>
 
-      {/* Hero card */}
-      <section className="rounded-3xl bg-gradient-to-br from-brand to-cyan-600 p-5 text-white shadow-lg">
-        <h2 className="text-lg font-bold">بیا با هوش مصنوعی صحبت کنیم!</h2>
-        <p className="mt-1 text-sm text-white/85">
-          یک سناریو انتخاب کن و مکالمه واقعی رو تمرین کن. اصلاحات لحظه‌ای گرامر و
-          تلفظ کنارته.
-        </p>
-      </section>
+      {/* ============ CTA ============ */}
+      <Link href="/scenarios" className="block focus-visible:outline-none">
+        <GlassCard
+          lift={6}
+          className="mb-8 flex items-center justify-between bg-gradient-to-br from-brand/90 to-cyan-600/90 p-5 text-white"
+        >
+          <div>
+            <h2 className="text-lg font-bold">بریم توی یه ماجرای واقعی! 🚀</h2>
+            <p className="mt-0.5 text-sm text-white/85">
+              یه سناریو انتخاب کن و با هوش مصنوعی چت کن.
+            </p>
+          </div>
+          <motion.div
+            whileHover={{ x: -4 }}
+            className="flex size-11 items-center justify-center rounded-full bg-white/20 backdrop-blur"
+          >
+            <ArrowLeft className="size-5" />
+          </motion.div>
+        </GlassCard>
+      </Link>
 
-      {/* Scenario preview */}
-      <section className="mt-8">
-        <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
-          سناریوهای آماده ({SCENARIOS.length})
-        </h3>
-        <ul className="space-y-2">
-          {SCENARIOS.map((s) => (
-            <li
-              key={s.id}
-              className="flex items-center justify-between rounded-2xl border border-border bg-card p-4"
+      {/* ============ PODCAST CTA ============ */}
+      <Link href="/podcasts" className="block focus-visible:outline-none">
+        <GlassCard
+          lift={4}
+          className="mb-8 flex items-center gap-4 bg-gradient-to-br from-violet-600/80 to-indigo-600/80 p-5 text-white"
+        >
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur">
+            <Headphones className="size-6" />
+          </div>
+          <div className="flex-1">
+            <h2 className="font-bold">پادکست و داستان صوتی 🎧</h2>
+            <p className="mt-0.5 text-sm text-white/85">
+              گوش بده، هم‌زمان بخون، و با کویز درک مطلب تمرین کن!
+            </p>
+          </div>
+          <ArrowLeft className="size-5 transition-transform group-hover:-translate-x-1" />
+        </GlassCard>
+      </Link>
+
+      {/* ============ LEARNING TREE ============ */}
+      <section className="pb-12">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-xl font-bold">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-brand-muted text-brand">
+              <BookOpen className="size-4" />
+            </span>
+            مسیر یادگیری
+          </h2>
+          <span className="text-xs text-muted-foreground">
+            {toPersianDigits(TOTAL_LESSONS)} درس از صفر تا صد
+          </span>
+        </div>
+
+        {/* Stages */}
+        <div className="space-y-8">
+          {CURRICULUM.map((stage, si) => (
+            <motion.div
+              key={stage.level}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ delay: si * 0.05 }}
             >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{s.role.avatar}</span>
+              {/* Stage header */}
+              <div className="mb-3 flex items-center gap-3">
+                <div
+                  className={cn(
+                    "flex size-10 items-center justify-center rounded-xl bg-gradient-to-br shadow-lg",
+                    accentStageTile(stage.accent)
+                  )}
+                >
+                  <Icon name={stage.icon} className="size-5 text-white" />
+                </div>
                 <div>
-                  <p className="font-medium">{s.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {s.role.name}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      {stage.level}
+                    </span>
+                    <h3 className="font-bold">{stage.label}</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{stage.subtitle}</p>
                 </div>
               </div>
-              <Badge variant="secondary">{s.difficulty}</Badge>
-            </li>
+
+              {/* Lessons grid: 1 col mobile, 2 col tablet, 3 col desktop */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {stage.lessons.map((lesson, li) => (
+                  <LessonCard
+                    key={lesson.id}
+                    lesson={lesson}
+                    accent={stage.accent}
+                    index={li}
+                  />
+                ))}
+              </div>
+            </motion.div>
           ))}
-        </ul>
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          فاز ۲ تکمیل شد — ساختار و اسکلت آماده است ✅
+        </div>
+
+        <p className="mt-10 text-center text-xs text-muted-foreground">
+          هر درسی تموم که بشه، قفل بعدی باز می‌شه. ادامه بده، استاد! 🎓
         </p>
       </section>
-    </AppShell>
+    </DashboardLayout>
   );
+}
+
+/* ---- helpers ---- */
+
+function StatChip({
+  icon: IconCmp,
+  label,
+  value,
+  accent,
+}: {
+  icon: typeof Flame;
+  label: string;
+  value: number;
+  accent: string;
+}) {
+  return (
+    <GlassCard noSpotlight lift={2} className="p-3">
+      <IconCmp className={cn("size-4", accent)} />
+      <p className="mt-2 text-xl font-extrabold leading-none tabular-nums">
+        {toPersianDigits(value)}
+      </p>
+      <p className="mt-1 text-[10px] text-muted-foreground">{label}</p>
+    </GlassCard>
+  );
+}
+
+/** Static gradient class strings per stage accent (JIT-safe). */
+function accentStageTile(accent: string): string {
+  const map: Record<string, string> = {
+    sky: "from-sky-500 to-sky-700",
+    emerald: "from-emerald-500 to-emerald-700",
+    amber: "from-amber-500 to-amber-700",
+    violet: "from-violet-500 to-violet-700",
+    rose: "from-rose-500 to-rose-700",
+    cyan: "from-cyan-500 to-cyan-700",
+  };
+  return map[accent] ?? map.cyan;
 }

@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, MessageCircle, BarChart3, Settings } from "lucide-react";
+import { Home, MessageCircle, Headphones, BarChart3, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * The four primary destinations in the app. Order matches the visual order,
+ * The primary destinations in the app. Order matches the visual order,
  * which (because the app is RTL) renders right-to-left.
  */
 const NAV_ITEMS = [
   { href: "/", label: "خانه", icon: Home },
   { href: "/scenarios", label: "تمرین", icon: MessageCircle },
+  { href: "/podcasts", label: "پادکست", icon: Headphones },
   { href: "/stats", label: "پیشرفت", icon: BarChart3 },
   { href: "/settings", label: "تنظیمات", icon: Settings },
 ] as const;
@@ -33,7 +34,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/80 backdrop-blur-lg safe-bottom"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/80 backdrop-blur-lg safe-bottom lg:hidden"
       aria-label="ناوبری اصلی"
     >
       <ul className="app-container flex items-stretch justify-around px-2">

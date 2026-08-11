@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { BookOpen, MessagesSquare, Clock, Target } from "lucide-react";
-import { AppShell } from "@/components/layout";
+import { DashboardLayout } from "@/components/layout";
 import {
   FeedbackBreakdown,
   ProgressRing,
@@ -49,7 +49,7 @@ export default function StatsPage() {
   ];
 
   return (
-    <AppShell>
+    <DashboardLayout>
       <header className="pt-10 pb-4">
         <h1 className="text-2xl font-bold">پیشرفت شما</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -119,6 +119,6 @@ export default function StatsPage() {
           />
         </Card>
       </section>
-    </AppShell>
+    </DashboardLayout>
   );
 }
