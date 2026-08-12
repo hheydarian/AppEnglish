@@ -54,12 +54,19 @@ export function BottomNav() {
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
                   />
                 )}
-                <Icon
-                  className={cn(
-                    "relative z-10 size-5 transition-transform",
-                    active && "scale-110 text-brand"
-                  )}
-                />
+                <motion.span
+                  whileHover={{ scale: 1.2, y: -2 }}
+                  whileTap={{ scale: 0.85 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  className="relative z-10"
+                >
+                  <Icon
+                    className={cn(
+                      "size-5 transition-colors",
+                      active && "text-brand"
+                    )}
+                  />
+                </motion.span>
                 <span
                   className={cn(
                     "relative z-10 text-[10px] font-medium leading-none",

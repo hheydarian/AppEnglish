@@ -146,6 +146,62 @@ function contextualPool(
       ];
 
     /* ----- A1 lesson roleplays ----- */
+    case "a1-1-1": // Daily vocab practice
+      return [
+        "Great! Now can you use 'wake up' in a sentence?",
+        "Nice! What do you do after you 'get dressed'?",
+        "Good one! Do you 'take a shower' in the morning or evening?",
+        "Awesome! Tell me — what do you 'eat' for breakfast?",
+      ];
+    case "a1-1-2": // Present simple grammar
+      return [
+        "Good! Now, does your best friend drink coffee too?",
+        "Nice try! Remember: he/she/it + s. Can you say 'She ___ (work) here'?",
+        "Great! Let's make it negative — 'I ___ (don't) like tea.'",
+        "Perfect! Ask me a 'Do you...?' question now!",
+      ];
+    case "a1-2-1": // Family + jobs
+      return [
+        "That's nice! What does your father do?",
+        "Cool! Do you have any brothers or sisters? What do they do?",
+        "Great! What's your dream job?",
+        "Wonderful! Is your mother a teacher or a doctor?",
+      ];
+    case "a1-2-2": // Possessives + adjectives
+      return [
+        "Lovely! Is your brother tall or short?",
+        "Nice! Is your mother kind? Tell me about her!",
+        "Great! Describe your best friend — is he funny?",
+        "Awesome! Use 'my' to tell me about your family.",
+      ];
+    case "a1-3-1": // Past verbs
+      return [
+        "Exciting! Where did you go?",
+        "Cool! What did you eat there?",
+        "Nice! Who did you meet?",
+        "Great! Did you play any sports?",
+      ];
+    case "a1-3-2": // Past + time words
+      return [
+        "Interesting! What did you do yesterday?",
+        "Nice! Did you see any friends last week?",
+        "Cool! Where did you go two days ago?",
+        "Great! What did you eat this morning?",
+      ];
+    case "a1-4-1": // Shopping vocab
+      return [
+        "Sure! What size do you wear?",
+        "Of course! How about this blue shirt? It's only 15 dollars.",
+        "Great choice! Do you also need shoes?",
+        "It's on sale today! Is that okay?",
+      ];
+    case "a1-4-2": // Directions
+      return [
+        "Sure! The bank is next to the cafe. Turn left and go straight.",
+        "No problem! The hotel is opposite the park. It's on the corner.",
+        "Of course! Go past the shop, then turn right. It's in front of you.",
+        "The station? It's between the bank and the school. Walk straight ahead!",
+      ];
     case "a1-1-3": // Daily routines
       return [
         "Wow, that's early! What do you do after you wake up?",
@@ -176,6 +232,92 @@ function contextualPool(
         "Of course! How about this blue one?",
         "It's only 20 dollars! Is that okay?",
         "No problem! The shop is next to the bank. Turn left and go straight.",
+      ];
+
+    /* ----- A2 lesson pools ----- */
+    case "a2-1-1": // Irregular past verbs
+      return [
+        "Wow! Where did you go? Tell me more!",
+        "That sounds fun! What did you see there?",
+        "Nice! Did you eat anything special?",
+        "Great! Did you buy anything interesting?",
+      ];
+    case "a2-1-2": // Past neg/questions
+      return [
+        "Interesting! Did you go anywhere last weekend?",
+        "Cool! What didn't you like about it?",
+        "Tell me — was the weather good yesterday?",
+        "Did you meet any friends last night? What did you talk about?",
+      ];
+    case "a2-1-3": // Vacation chat
+      return [
+        "That sounds amazing! Where exactly did you go?",
+        "So exciting! What did you do on the first day?",
+        "Yum! What local food did you try?",
+        "Wonderful! Would you go back again? Why?",
+      ];
+    case "a2-2-1": // Travel & future plans
+      return [
+        "Great choice! Have you booked a hotel yet?",
+        "Good! Are you going to pack light or take a big suitcase?",
+        "Nice! Do you have your passport ready?",
+        "Exciting! What are you going to do first when you arrive?",
+      ];
+    case "a2-2-2": // Comparatives
+      return [
+        "Interesting! Which one do you think is bigger?",
+        "Good point! Is it more expensive too?",
+        "Nice! So which is the best in your opinion?",
+        "Great! Can you use 'the most' to describe it?",
+      ];
+    case "a2-2-3": // Trip planning
+      return [
+        "Love it! Where are we going to stay?",
+        "Great! Are we going to fly or drive?",
+        "Perfect! What are we going to pack first?",
+        "Exciting! Which hotel is cheaper — this one or that one?",
+      ];
+    case "a2-3-1": // Health vocab
+      return [
+        "Oh no! Do you have a fever too?",
+        "I see. Is your throat sore?",
+        "How long have you had this cough?",
+        "Have you taken any medicine yet?",
+      ];
+    case "a2-3-2": // Should/shouldn't advice
+      return [
+        "You should drink lots of water and get some rest.",
+        "I think you shouldn't go to work today.",
+        "You should see a doctor if it doesn't get better.",
+        "You shouldn't eat heavy food. Try some soup!",
+      ];
+    case "a2-3-3": // Doctor visit
+      return [
+        "I see. How long have you had this headache?",
+        "Let me check your temperature. Do you feel hot?",
+        "You should take this medicine three times a day.",
+        "You should rest for two days. Don't worry, you'll feel better soon!",
+      ];
+    case "a2-4-1": // Life experiences
+      return [
+        "Wow, that's incredible! When did you do that?",
+        "Amazing! Have you ever tried something even more exciting?",
+        "So cool! What was the scariest part?",
+        "Great! Would you recommend it to others?",
+      ];
+    case "a2-4-2": // Have you ever...?
+      return [
+        "Interesting! Have you ever been to Japan?",
+        "Cool! Have you ever eaten frog legs?",
+        "Wow! Have you ever met someone famous?",
+        "Great question! Have you ever tried bungee jumping?",
+      ];
+    case "a2-4-3": // Experiences chat
+      return [
+        "That's fascinating! What did you learn from it?",
+        "Wow! Have you done anything like that since?",
+        "Incredible! How did it change you?",
+        "So inspiring! What's your next big goal?",
       ];
 
     default: {

@@ -37,13 +37,11 @@ export function StoryPlayer({ story }: StoryPlayerProps) {
 
   const total = story.lines.length;
 
-  // Voice gender is used to nudge the TTS engine toward a matching voice;
-  // we set the lang below and the browser picks a default. The toggle still
-  // gives users a sense of control and may switch voices in browsers that
-  // expose multiple voices per lang.
+  // Voice gender + accent drive the TTS engine to pick a matching system voice.
   const tts = useTTS({
     lang: accent === "us" ? "en-US" : "en-GB",
     rate: speed,
+    voiceGender,
   });
 
   /* --- playback logic --- */

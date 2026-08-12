@@ -191,3 +191,25 @@
     color: transparent;
   }
 }
+
+/* ---- Glass scrollbar — thin, translucent, brand-tinted ---- */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.62 0.15 175 / 0.3) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: oklch(0.62 0.15 175 / 0.3);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.62 0.15 175 / 0.5);
+  }
+}

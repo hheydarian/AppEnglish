@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 /* -------------------------------------------------------------------------- */
 /*  Speech preparation — make letters & short tokens pronounce distinctly     */
@@ -39,6 +39,8 @@ export interface UseTTSOptions {
   rate?: number;
   /** Voice pitch (0–2). 1 = normal. */
   pitch?: number;
+  /** Preferred voice gender for narration. Picks a matching system voice. */
+  voiceGender?: "female" | "male";
 }
 
 export interface UseTTSReturn {
@@ -63,12 +65,18 @@ function getSpeechSynthesisSupported() {
  * Used to read the AI character's replies aloud for listening practice.
  */
 export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
-  const { lang = "en-US", rate = 1, pitch = 1 } = options;
+  const { lang = "en-US", rate = 1, pitch = 1, voiceGender } = options;
   const [isSpeaking, setIsSpeaking] = useState(false);
   const isSupported = useSyncExternalStore(
     emptySubscribe,
     getSpeechSynthesisSupported, // client snapshot
     () => false // server snapshot (SSR)
+  );
+
+  // Resolve a system voice matching the requested gender + lang.
+  const resolvedVoice = useMemo(
+    () => (voiceGender ? pickVoiceByGender(lang, voiceGender) : undefined),
+    [lang, voiceGender]
   );
 
   useEffect(() => {
@@ -95,6 +103,8 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
       utterance.lang = lang;
       utterance.rate = rate;
       utterance.pitch = pitch;
+      // Use the gender-matched voice when available.
+      if (resolvedVoice) utterance.voice = resolvedVoice;
 
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => setIsSpeaking(false);
@@ -102,7 +112,7 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
 
       synth.speak(utterance);
     },
-    [lang, rate, pitch]
+    [lang, rate, pitch, resolvedVoice]
   );
 
   const cancel = useCallback(() => {
@@ -112,4 +122,43 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
   }, []);
 
   return { isSpeaking, isSupported, speak, cancel };
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Voice picker — match a system voice by gender + lang                     */
+/* -------------------------------------------------------------------------- */
+
+/** Heuristic name hints used to identify female vs male system voices. */
+const FEMALE_HINTS = [
+  "female", "samantha", "victoria", "zira", "karen", "moira", "tessa",
+  "serena", "fiona", "susan", "google us english", "google uk english female",
+  "aria", "jenny", "michelle",
+];
+const MALE_HINTS = [
+  "male", "daniel", "alex", "arthur", "oliver", "rishi", "fred", "tom",
+  "david", "george", "mark", "google uk english male",
+];
+
+/**
+ * Find a SpeechSynthesisVoice matching the requested gender and language.
+ * Falls back to the first voice for the language if no gender match is found.
+ */
+function pickVoiceByGender(
+  lang: string,
+  gender: "female" | "male"
+): SpeechSynthesisVoice | null {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length === 0) return null;
+
+  // Filter by language prefix (e.g. "en" from "en-US").
+  const langPrefix = lang.slice(0, 2).toLowerCase();
+  const langVoices = voices.filter((v) => v.lang.toLowerCase().startsWith(langPrefix));
+  const pool = langVoices.length > 0 ? langVoices : voices;
+
+  const hints = gender === "female" ? FEMALE_HINTS : MALE_HINTS;
+  const match = pool.find((v) =>
+    hints.some((h) => v.name.toLowerCase().includes(h))
+  );
+  return match ?? pool[0] ?? null;
 }

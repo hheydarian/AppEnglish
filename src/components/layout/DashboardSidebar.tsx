@@ -74,7 +74,14 @@ export function DashboardSidebar() {
                   transition={{ type: "spring", stiffness: 400, damping: 32 }}
                 />
               )}
-              <Icon className="relative z-10 size-5" />
+              <motion.span
+                whileHover={{ scale: 1.15, rotate: active ? 0 : -5 }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                className="relative z-10"
+              >
+                <Icon className="size-5" />
+              </motion.span>
               <span className="relative z-10">{label}</span>
             </Link>
           );

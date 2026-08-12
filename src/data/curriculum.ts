@@ -1,6 +1,7 @@
 import type { CurriculumStage, Lesson } from "@/types";
 import { A0_LESSON_CONTENT } from "./a0-content";
 import { A1_LESSON_CONTENT } from "./a1-content";
+import { A2_LESSON_CONTENT } from "./a2-content";
 
 /**
  * The SpeakUp Learning Tree — a complete path from absolute zero (A0) to
@@ -335,42 +336,152 @@ export const CURRICULUM: CurriculumStage[] = [
 
   {
     level: "A2",
-    label: "پایه",
-    subtitle: "حرف می‌زنی! حالا وقتشه واقعاً تو موقعیت‌ها قرار بگیری.",
+    label: "پیش‌متوسطه",
+    subtitle: "گذشته، آینده، سلامت و تجربیات زندگی — حسابی پیشرفت کردی!",
     icon: "Leaf",
     accent: "emerald",
     lessons: [
+      // Unit 1: Past simple & life events
       {
-        id: "a2-food",
-        title: "سفارش غذا",
-        description: "منوی رستوران، غذاها و پرداخت — با اعتماد‌به‌نفس.",
-        type: "roleplay",
+        id: "a2-1-1",
+        title: "۲۰ فعل بی‌قاعده گذشته",
+        description: "went, saw, ate, bought, felt... افعال پرکاربرد گذشته!",
+        type: "vocab",
         level: "A2",
-        icon: "UtensilsCrossed",
-        scenarioId: "cafe-ordering",
-        estimatedMinutes: 8,
-        locked: true,
+        icon: "History",
+        estimatedMinutes: 12,
       },
       {
-        id: "a2-past-tense",
-        title: "زمان گذشته ساده",
-        description: "تعطیلات آخر هفته‌ات رو تعریف کن. yesterday, last week...",
+        id: "a2-1-2",
+        title: "گذشته: سوال و منفی",
+        description: "Did you...? / I didn't... — گذشته رو کامل کن!",
         type: "grammar",
         level: "A2",
-        icon: "Clock",
-        estimatedMinutes: 14,
-        locked: true,
+        icon: "HelpCircle",
+        estimatedMinutes: 12,
       },
       {
-        id: "a2-chat",
-        title: "چت دوستانه",
-        description: "با یه دوست جدید آشنا شو و راجع به علایقت حرف بزن.",
+        id: "a2-1-3",
+        title: "مکالمه: خاطره تعطیلات",
+        description: "خاطره‌ی آخرین سفرت رو با AI تعریف کن!",
+        type: "roleplay",
+        level: "A2",
+        icon: "Plane",
+        estimatedMinutes: 8,
+      },
+      // Unit 2: Future plans & comparisons
+      {
+        id: "a2-2-1",
+        title: "سفر و برنامه‌های آینده",
+        description: "book a hotel, pack bags, flight ticket — سفر کن!",
+        type: "vocab",
+        level: "A2",
+        icon: "Luggage",
+        estimatedMinutes: 12,
+      },
+      {
+        id: "a2-2-2",
+        title: "مقایسه و be going to",
+        description: "bigger than, the most famous + برنامه‌ی آینده!",
+        type: "grammar",
+        level: "A2",
+        icon: "Scale",
+        estimatedMinutes: 12,
+      },
+      {
+        id: "a2-2-3",
+        title: "مکالمه: برنامه‌ریزی سفر",
+        description: "با AI برنامه‌ریزی سفر آینده‌ت رو انجام بده!",
+        type: "roleplay",
+        level: "A2",
+        icon: "MapPinned",
+        estimatedMinutes: 8,
+      },
+      // Unit 3: Health & advice
+      {
+        id: "a2-3-1",
+        title: "سلامت و بیماری",
+        description: "headache, fever, sore throat — علائم رو بشناس!",
+        type: "vocab",
+        level: "A2",
+        icon: "HeartPulse",
+        estimatedMinutes: 12,
+      },
+      {
+        id: "a2-3-2",
+        title: "توصیه با should/shouldn't",
+        description: "You should rest / shouldn't smoke — نصیحت کن!",
+        type: "grammar",
+        level: "A2",
+        icon: "Stethoscope",
+        estimatedMinutes: 12,
+      },
+      {
+        id: "a2-3-3",
+        title: "مکالمه: ویزیت پزشک",
+        description: "علایمت رو به دکتر AI بگو و توصیه بگیر!",
+        type: "roleplay",
+        level: "A2",
+        icon: "Stethoscope",
+        estimatedMinutes: 8,
+      },
+      // Unit 4: Present perfect & experiences
+      {
+        id: "a2-4-1",
+        title: "تجربیات هیجان‌انگیز",
+        description: "travel abroad, skydiving, meet someone famous!",
+        type: "vocab",
+        level: "A2",
+        icon: "Trophy",
+        estimatedMinutes: 12,
+      },
+      {
+        id: "a2-4-2",
+        title: "حال کامل ساده",
+        description: "Have you ever...? / I have visited... — تجربیاتت!",
+        type: "grammar",
+        level: "A2",
+        icon: "Sparkle",
+        estimatedMinutes: 12,
+      },
+      {
+        id: "a2-4-3",
+        title: "مکالمه: تجربیات زندگی",
+        description: "درباره‌ی تجربیات جابت با AI حرف بزن!",
         type: "roleplay",
         level: "A2",
         icon: "MessagesSquare",
-        scenarioId: "casual-chat",
         estimatedMinutes: 8,
-        locked: true,
+      },
+    ],
+    units: [
+      {
+        id: "a2-u1",
+        title: "گذشته و خاطرات",
+        subtitle: "خاطراتت رو تعریف کن",
+        icon: "History",
+        lessons: [],
+      },
+      {
+        id: "a2-u2",
+        title: "آینده و سفر",
+        subtitle: "برنامه‌ریزی کن",
+        icon: "Luggage",
+        lessons: [],
+      },
+      {
+        id: "a2-u3",
+        title: "سلامت و توصیه",
+        subtitle: "مراقب خودت باش",
+        icon: "HeartPulse",
+        lessons: [],
+      },
+      {
+        id: "a2-u4",
+        title: "تجربیات زندگی",
+        subtitle: "درباره‌ی تجربیاتت حرف بزن",
+        icon: "Trophy",
+        lessons: [],
       },
     ],
   },
@@ -458,6 +569,7 @@ export function getLessonContent(
   const all: Record<string, import("@/types").LessonContent> = {
     ...A0_LESSON_CONTENT,
     ...A1_LESSON_CONTENT,
+    ...A2_LESSON_CONTENT,
   };
   return all[lessonId];
 }

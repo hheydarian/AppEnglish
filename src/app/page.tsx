@@ -18,38 +18,45 @@ export default function Home() {
 
   return (
     <DashboardLayout>
-      {/* ============ HERO ============ */}
+      {/* ============ HERO — Liquid Glass ============ */}
       <motion.header
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="pt-10 pb-6"
+        className="pt-8 pb-6"
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">سلام رفیق! 👋</p>
-            <h1 className="mt-1 text-3xl font-extrabold text-gradient-brand sm:text-4xl">
-              بیا انگلیسی رو زنده کنیم!
-            </h1>
-            <p className="mt-2 max-w-md text-sm text-muted-foreground">
-              از الفبا تا مکالمه‌ی حرفه‌ای — قدم‌به‌قدم، با یه هوش مصنوعی که مثل
-              دوست بهت یاد می‌ده. آماده‌ای؟
-            </p>
-          </div>
-          <motion.div
-            animate={{ rotate: [0, 8, -8, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-cyan-500 text-white shadow-xl shadow-brand/30"
-          >
-            <Sparkles className="size-7" />
-          </motion.div>
-        </div>
+        {/* Frosted glass hero panel */}
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/20 bg-white/5 p-6 backdrop-blur-xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.4)]">
+          {/* Glow accents */}
+          <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-brand/20 blur-3xl" />
+          <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 size-32 rounded-full bg-cyan-500/10 blur-3xl" />
 
-        {/* Quick stat chips */}
+          <div className="relative flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">سلام رفیق! 👋</p>
+              <h1 className="mt-1 text-3xl font-extrabold text-gradient-brand sm:text-4xl">
+                بیا انگلیسی رو زنده کنیم!
+              </h1>
+              <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                از الفبا تا مکالمه‌ی حرفه‌ای — قدم‌به‌قدم، با یه هوش مصنوعی که مثل
+                دوست بهت یاد می‌ده. آماده‌ای؟
+              </p>
+            </div>
+            <motion.div
+              animate={{ rotate: [0, 8, -8, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-cyan-500 text-white shadow-xl shadow-brand/30"
+            >
+              <Sparkles className="size-7" />
+            </motion.div>
+          </div>
+
+        {/* Quick stat chips — jelly glass style */}
         <div className="mt-5 grid grid-cols-3 gap-3">
           <StatChip icon={Flame} label="روز زنده" value={streak} accent="text-orange-300" />
           <StatChip icon={Trophy} label="امتیاز" value={points} accent="text-amber-300" />
           <StatChip icon={BookOpen} label="درس انجام‌شده" value={lessonsDone} accent="text-emerald-300" />
+        </div>
         </div>
       </motion.header>
 
@@ -175,13 +182,20 @@ function StatChip({
   accent: string;
 }) {
   return (
-    <GlassCard noSpotlight lift={2} className="p-3">
-      <IconCmp className={cn("size-4", accent)} />
-      <p className="mt-2 text-xl font-extrabold leading-none tabular-nums">
+    <motion.div
+      whileHover={{ y: -3, scale: 1.03 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/5 p-3 backdrop-blur-xl"
+    >
+      {/* Jelly glow */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 hover:opacity-100"
+           style={{ background: "radial-gradient(120px circle at 50% 0%, rgba(255,255,255,0.08), transparent 70%)" }} />
+      <IconCmp className={cn("relative size-4", accent)} />
+      <p className="relative mt-2 text-xl font-extrabold leading-none tabular-nums">
         {toPersianDigits(value)}
       </p>
-      <p className="mt-1 text-[10px] text-muted-foreground">{label}</p>
-    </GlassCard>
+      <p className="relative mt-1 text-[10px] text-muted-foreground">{label}</p>
+    </motion.div>
   );
 }
 

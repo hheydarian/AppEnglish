@@ -8,9 +8,9 @@ import ChatView from "./ChatView";
  */
 export function generateStaticParams() {
   const scenarioIds = SCENARIOS.map((s) => ({ id: s.id }));
-  const lessonIds = ALL_LESSONS.filter((l) => l.level === "A0" || l.level === "A1").map((l) => ({
-    id: l.id,
-  }));
+  const lessonIds = ALL_LESSONS.filter(
+    (l) => l.level === "A0" || l.level === "A1" || l.level === "A2"
+  ).map((l) => ({ id: l.id }));
   return [...scenarioIds, ...lessonIds];
 }
 
