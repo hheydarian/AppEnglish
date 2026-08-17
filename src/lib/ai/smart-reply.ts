@@ -321,6 +321,15 @@ function contextualPool(
       ];
 
     default: {
+      // C1 lessons get a rigorous, academically challenging pool.
+      if (scenario.difficulty === "C1") {
+        return [
+          "That's a compelling argument. On what evidence do you base that claim?",
+          "Interesting — though I'd challenge you: is that inference or interpretation?",
+          "A nuanced position. How would you rebut the strongest counterargument?",
+          "I see the thrust of your reasoning. Could you substantiate that with an example?",
+        ];
+      }
       // B2 lessons get a more analytical, upper-intermediate pool.
       if (scenario.difficulty === "B2") {
         return [

@@ -4,6 +4,7 @@ import { A1_LESSON_CONTENT } from "./a1-content";
 import { A2_LESSON_CONTENT } from "./a2-content";
 import { B1_LESSON_CONTENT } from "./b1-content";
 import { B2_LESSON_CONTENT } from "./b2-content";
+import { C1_LESSON_CONTENT } from "./c1-content";
 
 /**
  * The SpeakUp Learning Tree — a complete path from absolute zero (A0) to
@@ -595,6 +596,61 @@ export const CURRICULUM: CurriculumStage[] = [
     ],
   },
 
+  /* ==================================================================== */
+  /*  C1 — Advanced (FULL: 8 units × 3 lessons)                           */
+  /* ==================================================================== */
+  {
+    level: "C1",
+    label: "پیشرفته",
+    subtitle: "دیپلماسی، فلسفه، اقتصاد کلان و نگارش آکادمیک — سطح C1!",
+    icon: "Award",
+    accent: "cyan",
+    lessons: [
+      // Unit 1: Diplomacy & hedging
+      { id: "c1-1-1", title: "تعدیل کلام (Hedging)", description: "It is plausible that, arguably, tentative...", type: "vocab", level: "C1", icon: "Scale", estimatedMinutes: 12 },
+      { id: "c1-1-2", title: "وجه التزامی", description: "I recommend that he be... / It is imperative...", type: "grammar", level: "C1", icon: "Crown", estimatedMinutes: 14 },
+      { id: "c1-1-3", title: "مکالمه: میانجی‌گری تجاری", description: "در مناقشه‌ی دو شرکت بین‌المللی میانجی باش!", type: "roleplay", level: "C1", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 2: Philosophy & AI ethics
+      { id: "c1-2-1", title: "فلسفه و شناخت", description: "epistemology, sentience, paradigm shift...", type: "vocab", level: "C1", icon: "Brain", estimatedMinutes: 12 },
+      { id: "c1-2-2", title: "شرطی‌های وارونه", description: "Had we anticipated... / Were it not for...", type: "grammar", level: "C1", icon: "GitBranch", estimatedMinutes: 14 },
+      { id: "c1-2-3", title: "مکالمه: اخلاق AI", description: "با پژوهشگر درباره‌ی AI خودمختار مناظره کن!", type: "roleplay", level: "C1", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 3: Geopolitics & climate
+      { id: "c1-3-1", title: "ژئوپلیتیک و اقلیم", description: "sovereignty, net-zero, multilateral...", type: "vocab", level: "C1", icon: "Globe", estimatedMinutes: 12 },
+      { id: "c1-3-2", title: "پیوندهای رسمی", description: "notwithstanding, whereby, henceforth...", type: "grammar", level: "C1", icon: "Link", estimatedMinutes: 14 },
+      { id: "c1-3-3", title: "مکالمه: سخنرانی دیپلماتیک", description: "در نشست شبیه‌سازی‌شده‌ی سازمان ملل سخنرانی کن!", type: "roleplay", level: "C1", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 4: Macroeconomics & fintech
+      { id: "c1-4-1", title: "اقتصاد کلان و فین‌تک", description: "liquidity, systemic risk, quantitative easing...", type: "vocab", level: "C1", icon: "TrendingUp", estimatedMinutes: 12 },
+      { id: "c1-4-2", title: "وارونگی منفی", description: "Under no circumstances will we... — تأکید!", type: "grammar", level: "C1", icon: "ArrowUpDown", estimatedMinutes: 14 },
+      { id: "c1-4-3", title: "مکالمه: استراتژی ریسک", description: "استراتژی مدیریت ریسک رو به هیئت‌مدیره ارائه کن!", type: "roleplay", level: "C1", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 5: Neuroscience
+      { id: "c1-5-1", title: "علوم اعصاب", description: "cognitive dissonance, neuroplasticity, bias...", type: "vocab", level: "C1", icon: "Dna", estimatedMinutes: 12 },
+      { id: "c1-5-2", title: "مجهول آکادمیک", description: "It is widely purported that / There is believed...", type: "grammar", level: "C1", icon: "ArrowLeftRight", estimatedMinutes: 14 },
+      { id: "c1-5-3", title: "مکالمه: مطالعه موردی", description: "مطالعه موردی روان‌شناختی رو تحلیل کن!", type: "roleplay", level: "C1", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 6: Literary devices
+      { id: "c1-6-1", title: "کنایه و استعاره", description: "double entendre, satirical, juxtaposition...", type: "vocab", level: "C1", icon: "BookOpen", estimatedMinutes: 12 },
+      { id: "c1-6-2", title: "اسمی‌سازی", description: "The rapid deterioration of... — فشرده‌سازی!", type: "grammar", level: "C1", icon: "Package", estimatedMinutes: 14 },
+      { id: "c1-6-3", title: "مکالمه: نقد ادبی", description: "رمان معاصری رو با منتقد نقد کن!", type: "roleplay", level: "C1", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 7: Urbanism & futurism
+      { id: "c1-7-1", title: "شهرسازی پایدار", description: "biophilic, urban sprawl, carbon footprint...", type: "vocab", level: "C1", icon: "Trees", estimatedMinutes: 12 },
+      { id: "c1-7-2", title: "بندهای پیراسته", description: "When evaluating... / Although controversial...", type: "grammar", level: "C1", icon: "Scissors", estimatedMinutes: 14 },
+      { id: "c1-7-3", title: "مکالمه: شورای شهر", description: "پروژه‌ی شهر هوشمند رو در شورا دفاع کن!", type: "roleplay", level: "C1", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 8: Scholarly discourse
+      { id: "c1-8-1", title: "نگارش آکادمیک", description: "empirical, methodology, discrepancy, validity...", type: "vocab", level: "C1", icon: "FlaskConical", estimatedMinutes: 12 },
+      { id: "c1-8-2", title: "پیوندهای علّی سطح بالا", description: "Notwithstanding, Inasmuch as, Hitherto...", type: "grammar", level: "C1", icon: "Quote", estimatedMinutes: 14 },
+      { id: "c1-8-3", title: "مکالمه: دفاعیه دکتری", description: "پروپوزال پژوهشیت رو به کمیته دفاع کن!", type: "roleplay", level: "C1", icon: "MessagesSquare", estimatedMinutes: 8 },
+    ],
+    units: [
+      { id: "c1-u1", title: "دیپلماسی و ظرافت کلام", subtitle: "کلام دیپلماتیک", icon: "Scale", lessons: [] },
+      { id: "c1-u2", title: "فلسفه و اخلاق AI", subtitle: "ذهن و ماشین", icon: "Brain", lessons: [] },
+      { id: "c1-u3", title: "ژئوپلیتیک و اقلیم", subtitle: "دیپلماسی جهانی", icon: "Globe", lessons: [] },
+      { id: "c1-u4", title: "اقتصاد کلان", subtitle: "فین‌تک و بازار", icon: "TrendingUp", lessons: [] },
+      { id: "c1-u5", title: "علوم اعصاب", subtitle: "شناخت رفتار", icon: "Dna", lessons: [] },
+      { id: "c1-u6", title: "ادبیات و طنز", subtitle: "کنایه و ظرافت", icon: "BookOpen", lessons: [] },
+      { id: "c1-u7", title: "شهر پایدار", subtitle: "آینده‌سازی", icon: "Trees", lessons: [] },
+      { id: "c1-u8", title: "نگارش آکادمیک", subtitle: "دفاعیه پژوهش", icon: "FlaskConical", lessons: [] },
+    ],
+  },
+
   {
     level: "C2",
     label: "تسلط کامل",
@@ -649,6 +705,7 @@ export function getLessonContent(
     ...A2_LESSON_CONTENT,
     ...B1_LESSON_CONTENT,
     ...B2_LESSON_CONTENT,
+    ...C1_LESSON_CONTENT,
   };
   return all[lessonId];
 }

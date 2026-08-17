@@ -14,7 +14,8 @@ export function generateStaticParams() {
       l.level === "A1" ||
       l.level === "A2" ||
       l.level === "B1" ||
-      l.level === "B2"
+      l.level === "B2" ||
+      l.level === "C1"
   ).map((l) => ({ id: l.id }));
   return [...scenarioIds, ...lessonIds];
 }
