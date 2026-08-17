@@ -321,6 +321,24 @@ function contextualPool(
       ];
 
     default: {
+      // B2 lessons get a more analytical, upper-intermediate pool.
+      if (scenario.difficulty === "B2") {
+        return [
+          "That's a thoughtful perspective. What led you to that conclusion?",
+          "Interesting! Can you elaborate on that with an example?",
+          "I see your point. How might someone counter that argument?",
+          "Fascinating. How do you think this will develop in the future?",
+        ];
+      }
+      // B1 lessons fall through here — use a generic B1 pool keyed by level.
+      if (scenario.difficulty === "B1") {
+        return [
+          "That's interesting! Can you tell me more about that?",
+          "Good point! What do you think about it?",
+          "I see! Could you give me an example?",
+          "Really? Why do you think so?",
+        ];
+      }
       // Generic fallback for the four base scenarios (cafe, interview, ...).
       if (scenario.category === "work") {
         return [
