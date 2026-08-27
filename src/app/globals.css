@@ -213,3 +213,34 @@
     background: oklch(0.62 0.15 175 / 0.5);
   }
 }
+
+/* ---- Settings-driven appearance modes (set by AppProviders) ---- */
+
+/*
+ * Minimal glass: strip backdrop blurs and heavy shadows for a flat, fast
+ * UI on low-end devices. Attribute is set on <html> as data-glass="minimal".
+ */
+[data-glass="minimal"] .backdrop-blur,
+[data-glass="minimal"] .backdrop-blur-lg,
+[data-glass="minimal"] .backdrop-blur-xl,
+[data-glass="minimal"] .backdrop-blur-2xl {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+[data-glass="minimal"] * {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+}
+
+/*
+ * Reduce motion: kill CSS animations/transitions globally.
+ * (Framer Motion animations are handled via MotionConfig in AppProviders;
+ * these rules cover pure-CSS effects like the typing dots and pulsing rings.)
+ */
+[data-reduce-motion="true"] *,
+[data-reduce-motion="true"] *::before,
+[data-reduce-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

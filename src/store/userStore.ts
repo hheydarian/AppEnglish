@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { secureStorage } from "@/lib/secureStorage";
 import type {
   CEFRLevel,
   CompletedScenario,
@@ -182,7 +183,7 @@ export const useUserStore = create<UserState>()(
     }),
     {
       name: "speakup-user",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => secureStorage),
     }
   )
 );

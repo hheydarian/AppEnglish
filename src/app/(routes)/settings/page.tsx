@@ -1,226 +1,642 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
+  AudioLines,
   GraduationCap,
   Gauge,
-  Globe,
-  KeyRound,
   Volume2,
-  Play,
+  Palette,
+  Database,
+  Download,
+  Upload,
+  MessageSquareOff,
   Trash2,
+  Wifi,
+  WifiOff,
+  AlertTriangle,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { useTTS } from "@/hooks/useTTS";
+import { useChatStore } from "@/store/chatStore";
+import {
+  secureGetItem,
+  secureSetItem,
+  secureRemoveItem,
+} from "@/lib/secureStorage";
 import { cn, toPersianDigits } from "@/lib/utils";
+import { tap, success } from "@/lib/feedback";
 import {
   useSettingsStore,
   ACCENT_TO_LOCALE,
+  TTS_PRESETS,
+  APP_VERSION,
   type Accent,
-  type ProficiencyLevel,
+  type VoiceGender,
+  type DefaultLevelBand,
+  type GlassStyle,
 } from "@/store/settingsStore";
-import { useUserStore } from "@/store/userStore";
-import { useTTS } from "@/hooks/useTTS";
 
-const PROFICIENCY_OPTIONS: { value: ProficiencyLevel; label: string; desc: string }[] = [
-  { value: "Beginner", label: "مبتدی", desc: "A1–A2" },
-  { value: "Intermediate", label: "متوسط", desc: "B1–B2" },
-  { value: "Advanced", label: "پیشرفته", desc: "C1–C2" },
+/* -------------------------------------------------------------------------- */
+/*  Constants                                                                 */
+/* -------------------------------------------------------------------------- */
+
+const STORAGE_KEYS = [
+  "speakup-settings",
+  "speakup-user",
+  "speakup-lessons",
+  "speakup-chat",
 ];
 
-const ACCENT_OPTIONS: { value: Accent; label: string; flag: string }[] = [
+const ACCENTS: { value: Accent; label: string; flag: string }[] = [
   { value: "us", label: "آمریکایی", flag: "🇺🇸" },
   { value: "uk", label: "بریتانیایی", flag: "🇬🇧" },
+  { value: "au", label: "استرالیایی", flag: "🇦🇺" },
 ];
 
-const SAMPLE_TEXT = "Hi there! I'm so glad to practice English with you today.";
+const LEVEL_BANDS: { value: DefaultLevelBand; label: string; range: string }[] = [
+  { value: "beginner", label: "مبتدی", range: "A0–A2" },
+  { value: "intermediate", label: "متوسط", range: "B1–B2" },
+  { value: "advanced", label: "پیشرفته", range: "C1–C2" },
+];
+
+const SPEED_LABELS = ["آرام", "طبیعی", "سریع"];
+
+const PREVIEW_SENTENCE = "Welcome to SpeakUp! I am your AI language partner.";
+
+/* -------------------------------------------------------------------------- */
+/*  Page                                                                       */
+/* -------------------------------------------------------------------------- */
 
 export default function SettingsPage() {
-  const settings = useSettingsStore();
-  const resetStats = useUserStore((s) => s.resetStats);
+  const s = useSettingsStore();
 
-  const [mounted, setMounted] = useState(false);
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setMounted(true), []);
-
-  // TTS preview, driven by current settings.
-  const tts = useTTS({
-    lang: ACCENT_TO_LOCALE[settings.accent],
-    rate: settings.ttsRate,
+  // Live preview engine — always reflects the current voice settings.
+  const preview = useTTS({
+    lang: ACCENT_TO_LOCALE[s.accent],
+    rate: s.ttsRate,
+    voiceGender: s.voiceGender,
   });
 
+  // Online/offline status + local-storage footprint.
+  // Initial values are read inside a macrotask callback (never synchronously
+  // in the effect body) to avoid cascading renders; listeners keep it live.
+  const [online, setOnline] = useState(true);
+  const [storageBytes, setStorageBytes] = useState(0);
+
+  const refreshStorage = () => {
+    let total = 0;
+    for (const k of Object.keys(localStorage)) {
+      // SecureStorage writes under `sec:speakup-*`; legacy plaintext too.
+      if (k.startsWith("speakup") || k.startsWith("sec:speakup")) {
+        total += (k + (localStorage.getItem(k) ?? "")).length * 2;
+      }
+    }
+    setStorageBytes(total);
+  };
+
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    // Defer the initial read out of the synchronous effect body.
+    const t = setTimeout(() => {
+      setOnline(navigator.onLine);
+      refreshStorage();
+    }, 0);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+     
+  }, []);
+
+  // Two-step destructive dialogs.
+  const [resetStage, setResetStage] = useState<0 | 1 | 2>(0); // 0 closed, 1 arm, 2 final
+  const [clearChatArmed, setClearChatArmed] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  /* ---------- handlers ---------- */
+
+  // Export reads the DECRYPTED values via SecureStorage so backups stay
+  // portable, then re-imports through the same secure path (re-sealed).
+  const exportProgress = () => {
+    const data: Record<string, string> = {};
+    for (const k of STORAGE_KEYS) {
+      const v = secureGetItem(k);
+      if (v) data[k] = v; // already JSON strings — keep as raw strings
+    }
+    const blob = new Blob(
+      [JSON.stringify({ app: "speakup", version: 3, exportedAt: new Date().toISOString(), data }, null, 2)],
+      { type: "application/json" }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `speakup-progress-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    success();
+  };
+
+  const importProgress = async (file: File) => {
+    try {
+      const parsed = JSON.parse(await file.text());
+      if (parsed?.app !== "speakup" || typeof parsed?.data !== "object") throw new Error("bad");
+      Object.entries(parsed.data as Record<string, string>).forEach(([k, v]) => {
+        if (STORAGE_KEYS.includes(k as never)) secureSetItem(k, String(v));
+      });
+      location.reload();
+    } catch {
+      alert("فایل پشتیبان معتبر نیست! ❌");
+    }
+  };
+
+  const clearChats = () => {
+    useChatStore.getState().resetSession();
+    secureRemoveItem("speakup-chat");
+    setClearChatArmed(false);
+    refreshStorage();
+    success();
+  };
+
+  const fullReset = () => {
+    STORAGE_KEYS.forEach((k) => secureRemoveItem(k));
+    location.reload();
+  };
+
+  const kb = (storageBytes / 1024).toFixed(1);
+
+  /* ======================================================================== */
   return (
     <DashboardLayout>
       <header className="pt-10 pb-4">
         <h1 className="text-2xl font-bold">تنظیمات</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          تجربه یادگیری‌ات رو شخصی‌سازی کن.
+          هر تغییری همین لحظه روی کل اپلیکیشن اعمال می‌شه! ⚡
         </p>
       </header>
 
-      {/* ---- Proficiency level ---- */}
-      <Section icon={GraduationCap} title="سطح زبان">
-        <div className="grid grid-cols-3 gap-2">
-          {PROFICIENCY_OPTIONS.map((opt) => {
-            const active = mounted && settings.proficiency === opt.value;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => settings.setProficiency(opt.value)}
-                className={cn(
-                  "rounded-xl border p-3 text-center transition-all",
-                  active
-                    ? "border-brand bg-brand-muted text-brand"
-                    : "border-border bg-card hover:border-brand/40"
-                )}
+      {/* ============ ۱) صدا و هویت هوش مصنوعی ============ */}
+      <Section icon={AudioLines} title="صدای هوش مصنوعی">
+        {/* Gender */}
+        <OptionRow label="جنسیت گوینده">
+          <div className="flex gap-2">
+            {(["female", "male"] as VoiceGender[]).map((g) => (
+              <GlassPill
+                key={g}
+                active={s.voiceGender === g}
+                onClick={() => {
+                  tap();
+                  s.setVoiceGender(g);
+                }}
               >
-                <p className="text-sm font-semibold">{opt.label}</p>
-                <p className="mt-0.5 text-[10px] text-muted-foreground">
-                  {opt.desc}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </Section>
+                {g === "female" ? "👩 زن" : "👨 مرد"}
+              </GlassPill>
+            ))}
+          </div>
+        </OptionRow>
 
-      {/* ---- Accent ---- */}
-      <Section icon={Globe} title="لهجه">
-        <div className="grid grid-cols-2 gap-2">
-          {ACCENT_OPTIONS.map((opt) => {
-            const active = mounted && settings.accent === opt.value;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => settings.setAccent(opt.value)}
-                className={cn(
-                  "flex items-center justify-center gap-2 rounded-xl border p-3 transition-all",
-                  active
-                    ? "border-brand bg-brand-muted"
-                    : "border-border bg-card hover:border-brand/40"
-                )}
+        {/* Accent */}
+        <OptionRow label="لهجه پیش‌فرض">
+          <div className="flex flex-wrap gap-2">
+            {ACCENTS.map((a) => (
+              <GlassPill
+                key={a.value}
+                active={s.accent === a.value}
+                onClick={() => {
+                  tap();
+                  s.setAccent(a.value);
+                }}
               >
-                <span className="text-xl">{opt.flag}</span>
-                <span className="text-sm font-medium">{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </Section>
+                {a.flag} {a.label}
+              </GlassPill>
+            ))}
+          </div>
+        </OptionRow>
 
-      {/* ---- TTS rate ---- */}
-      <Section icon={Gauge} title="سرعت پخش صدا">
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">آرام</span>
-          <input
-            type="range"
-            min={0.5}
-            max={1.5}
-            step={0.05}
-            value={mounted ? settings.ttsRate : 0.95}
-            onChange={(e) => settings.setTtsRate(Number(e.target.value))}
-            className="flex-1 accent-brand"
-            dir="ltr"
-          />
-          <span className="text-xs text-muted-foreground">سریع</span>
-          <Badge variant="secondary" className="tabular-nums">
-            {toPersianDigits((mounted ? settings.ttsRate : 0.95).toFixed(2))}×
-          </Badge>
-        </div>
-        <button
-          onClick={() => tts.speak(SAMPLE_TEXT)}
-          disabled={!tts.isSupported}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-muted py-2.5 text-sm font-medium text-brand transition-colors hover:bg-brand-muted/70 disabled:opacity-40"
-        >
-          <Play className="size-4" />
-          پخش نمونه صدا
-        </button>
-      </Section>
+        {/* Speed */}
+        <OptionRow label="سرعت خوانش (TTS)">
+          <div className="flex gap-2">
+            {TTS_PRESETS.map((v, i) => (
+              <GlassPill
+                key={v}
+                active={Math.abs(s.ttsRate - v) < 0.01}
+                onClick={() => {
+                  tap();
+                  s.setTtsRate(v);
+                }}
+              >
+                <Gauge className="size-3.5" />
+                {v.toFixed(2)}× {SPEED_LABELS[i]}
+              </GlassPill>
+            ))}
+          </div>
+        </OptionRow>
 
-      {/* ---- Personal API key ---- */}
-      <Section icon={KeyRound} title="کلید API شخصی (اختیاری)">
-        <p className="mb-2 text-xs leading-relaxed text-muted-foreground">
-          برای استفاده از هوش مصنوعی واقعی، کلید OpenAI خودت رو وارد کن. کلید فقط
-          روی دستگاه شما ذخیره می‌شه و به سرور خودمون ارسال می‌شه.
-        </p>
-        <div className="flex items-center gap-2">
-          <input
-            type="password"
-            value={mounted ? settings.apiKey : ""}
-            onChange={(e) => settings.setApiKey(e.target.value)}
-            placeholder="sk-..."
-            dir="ltr"
-            className="flex-1 rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-brand"
-          />
-          {mounted && settings.apiKey && (
-            <button
-              onClick={() => settings.setApiKey("")}
-              className="rounded-xl border border-border p-2.5 text-muted-foreground hover:text-foreground"
-              aria-label="پاک کردن کلید"
-            >
-              <Trash2 className="size-4" />
-            </button>
-          )}
-        </div>
-        {mounted && settings.apiKey ? (
-          <Badge className="mt-2 bg-emerald-100 text-emerald-700">فعال ✓</Badge>
-        ) : (
-          <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Volume2 className="size-3" />
-            بدون کلید از حالت دمو (Mock) استفاده می‌شه.
-          </p>
-        )}
-      </Section>
-
-      {/* ---- Danger zone ---- */}
-      <Section icon={Trash2} title="بازنشانی داده‌ها">
+        {/* Live preview */}
         <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={() => {
-            if (
-              confirm(
-                "تمام آمار و پیشرفت شما پاک خواهد شد. آیا مطمئن هستید؟"
-              )
-            ) {
-              resetStats();
-            }
-          }}
-          className="w-full rounded-xl border border-red-200 bg-red-50 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
+          whileTap={{ scale: 0.97 }}
+          onClick={() => preview.speak(PREVIEW_SENTENCE)}
+          className={cn(
+            "mt-1 flex min-h-11 w-full items-center justify-center gap-2 rounded-full py-2.5 text-sm font-semibold transition-colors",
+            preview.isSpeaking
+              ? "bg-brand text-brand-foreground"
+              : "bg-brand-muted/50 text-brand hover:bg-brand-muted"
+          )}
         >
-          پاک کردن آمار و پیشرفت
+          <Volume2 className="size-4" />
+          {preview.isSpeaking ? "در حال پخش نمونه..." : "پخش زنده‌ی نمونه صدا"}
         </motion.button>
       </Section>
 
-      <p className="pb-4 pt-2 text-center text-[11px] text-muted-foreground">
-        SpeakUp — نسخه ۰.۱
+      {/* ============ ۲) تجربه یادگیری ============ */}
+      <Section icon={GraduationCap} title="تجربه‌ی یادگیری">
+        <OptionRow label="سطح پیش‌فرض نمایش" hint="صفحه اصلی روی بخش انتخابی فوکوس می‌کنه">
+          <div className="flex flex-wrap gap-2">
+            {LEVEL_BANDS.map((b) => (
+              <GlassPill
+                key={b.value}
+                active={s.defaultLevel === b.value}
+                onClick={() => {
+                  tap();
+                  s.setDefaultLevel(b.value);
+                }}
+              >
+                {b.label} <span dir="ltr" className="text-[10px] opacity-70">{b.range}</span>
+              </GlassPill>
+            ))}
+          </div>
+        </OptionRow>
+
+        <ToggleRow
+          label="افکت صوتی و لرزش"
+          hint="صدای کلیک و موفقیت در آزمون‌ها + ویبره"
+          checked={s.feedbackEnabled}
+          onChange={(v) => {
+            s.setFeedbackEnabled(v);
+            if (v) success();
+          }}
+        />
+
+        <ToggleRow
+          label="نمایش خودکار ترجمه فارسی"
+          hint="خاموش = حالت چالش؛ معنی فلش‌کارت‌ها با لمس باز می‌شه"
+          checked={s.showPersianTranslation}
+          onChange={(v) => {
+            tap();
+            s.setShowPersianTranslation(v);
+          }}
+        />
+      </Section>
+
+      {/* ============ ۳) ظاهر و جلوه‌ها ============ */}
+      <Section icon={Palette} title="ظاهر و جلوه‌های بصری">
+        <OptionRow label="شدت جلوه‌ی شیشه‌ای">
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                { v: "liquid", t: "شیشه‌ای براق", e: "💧", d: "Liquid Glass" },
+                { v: "minimal", t: "کلاسیک تخت", e: "⚡", d: "Minimal" },
+              ] as { v: GlassStyle; t: string; e: string; d: string }[]
+            ).map((o) => (
+              <button
+                key={o.v}
+                onClick={() => {
+                  tap();
+                  s.setGlassStyle(o.v);
+                }}
+                className={cn(
+                  "min-h-11 rounded-xl border p-3 text-center transition-all",
+                  s.glassStyle === o.v
+                    ? "border-brand bg-brand-muted/30"
+                    : "border-border hover:border-brand/40"
+                )}
+              >
+                <div className="text-xl">{o.e}</div>
+                <div className="mt-1 text-xs font-semibold">{o.t}</div>
+                <div className="text-[10px] text-muted-foreground" dir="ltr">{o.d}</div>
+              </button>
+            ))}
+          </div>
+        </OptionRow>
+
+        <ToggleRow
+          label="کاهش انیمیشن‌ها"
+          hint="برای دستگاه‌های ضعیف — صحنه‌های سه‌بعدی و حرکت‌ها ساده می‌شن"
+          checked={s.reduceMotion}
+          onChange={(v) => {
+            tap();
+            s.setReduceMotion(v);
+          }}
+        />
+      </Section>
+
+      {/* ============ ۴) داده‌ها و پروفایل ============ */}
+      <Section icon={Database} title="داده‌ها و پروفایل">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <ActionCard icon={Download} label="پشتیبان‌گیری پیشرفت" sub="دانلود فایل JSON" onClick={exportProgress} />
+          <ActionCard
+            icon={Upload}
+            label="بازیابی پیشرفت"
+            sub="بارگذاری فایل پشتیبان"
+            onClick={() => fileRef.current?.click()}
+            input={
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void importProgress(f);
+                  e.target.value = "";
+                }}
+              />
+            }
+          />
+        </div>
+
+        {/* Clear chats (inline 2-step) */}
+        <button
+          onClick={() => (clearChatArmed ? clearChats() : setClearChatArmed(true))}
+          onBlur={() => setClearChatArmed(false)}
+          className={cn(
+            "mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-full border py-2.5 text-sm font-medium transition-colors",
+            clearChatArmed
+              ? "border-orange-500 bg-orange-500/10 text-orange-500"
+              : "border-border text-muted-foreground hover:bg-muted"
+          )}
+        >
+          <MessageSquareOff className="size-4" />
+          {clearChatArmed ? "مطمئنی؟ دوباره بزن تا پاک بشه" : "پاک کردن فقط تاریخچه چت‌ها"}
+        </button>
+
+        {/* Full reset — opens glass dialog */}
+        <button
+          onClick={() => {
+            tap();
+            setResetStage(1);
+          }}
+          className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-red-300/50 bg-red-50 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
+        >
+          <Trash2 className="size-4" />
+          ریست کامل پیشرفت و شروع مجدد
+        </button>
+
+        {/* Info card */}
+        <div className="mt-4 space-y-2 rounded-2xl bg-white/5 p-4 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between">
+            <span>نسخه</span>
+            <span dir="ltr" className="font-semibold text-foreground">{APP_VERSION}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>حافظه‌ی محلی</span>
+            <span className="tabular-nums">{toPersianDigits(kb)} کیلوبایت</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>وضعیت اتصال</span>
+            <span
+              className={cn(
+                "flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold",
+                online ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+              )}
+            >
+              {online ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
+              {online ? "آنلاین" : "آفلاین"}
+            </span>
+          </div>
+        </div>
+      </Section>
+
+      <p className="pb-6 pt-2 text-center text-[11px] text-muted-foreground">
+        ساخته شده با ❤️ برای فارسی‌زبانان
       </p>
+
+      {/* ============ Two-step full-reset dialog ============ */}
+      <AnimatePresence>
+        {resetStage > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+            onClick={() => setResetStage(0)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-3xl border border-white/20 bg-card/95 p-6 shadow-2xl backdrop-blur-2xl"
+            >
+              <div className="mb-3 flex items-center gap-2 text-red-500">
+                <AlertTriangle className="size-5" />
+                <h3 className="font-bold">
+                  {resetStage === 1 ? "ریست کامل پیشرفت" : "تأیید نهایی"}
+                </h3>
+              </div>
+
+              {resetStage === 1 ? (
+                <>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    این کار <b className="text-foreground">تمام</b> آمار، استریک‌ها،
+                    پیشرفت دروس، تاریخچه چت‌ها و تنظیمات رو برای همیشه پاک می‌کنه.
+                  </p>
+                  <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+                    <li>• ۱۳۲ درس و پیشرفت آن‌ها</li>
+                    <li>• تاریخچه چت‌های هوش مصنوعی</li>
+                    <li>• امتیازها، گواهی‌ها و تنظیمات</li>
+                  </ul>
+                  <div className="mt-5 flex gap-2">
+                    <button
+                      onClick={() => setResetStage(0)}
+                      className="min-h-11 flex-1 rounded-full border border-border py-2.5 text-sm font-medium"
+                    >
+                      انصراف
+                    </button>
+                    <button
+                      onClick={() => setResetStage(2)}
+                      className="min-h-11 flex-1 rounded-full border border-red-400/50 bg-red-500/10 py-2.5 text-sm font-bold text-red-500"
+                    >
+                      ادامه — مرحله ۱ از ۲
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    مطمئنی؟ این عمل <b className="text-red-500">قابل بازگشت نیست</b>.
+                    قبلش یه پشتیبان JSON گرفتی؟
+                  </p>
+                  <div className="mt-5 flex gap-2">
+                    <button
+                      onClick={() => setResetStage(0)}
+                      className="min-h-11 flex-1 rounded-full border border-border py-2.5 text-sm font-medium"
+                    >
+                      نه، انصراف
+                    </button>
+                    <button
+                      onClick={fullReset}
+                      className="min-h-11 flex-1 rounded-full bg-red-600 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-600/30"
+                    >
+                      بله، همه‌چیز رو پاک کن
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }
 
-/* ---- small section wrapper ---- */
+/* -------------------------------------------------------------------------- */
+/*  Building blocks                                                            */
+/* -------------------------------------------------------------------------- */
+
 function Section({
   icon: Icon,
   title,
   children,
 }: {
-  icon: typeof GraduationCap;
+  icon: typeof AudioLines;
   title: string;
   children: React.ReactNode;
 }) {
   return (
     <motion.section
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-4"
+      className="mt-5"
     >
       <div className="mb-2 flex items-center gap-1.5 px-1 text-sm font-semibold">
         <Icon className="size-4 text-brand" />
         {title}
       </div>
-      <Card className="p-4">{children}</Card>
+      <GlassCard className="space-y-4 p-5">{children}</GlassCard>
     </motion.section>
+  );
+}
+
+function OptionRow({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-2 text-sm font-medium">{label}</div>
+      {hint && <p className="mb-2 text-[11px] text-muted-foreground">{hint}</p>}
+      {children}
+    </div>
+  );
+}
+
+function GlassPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex min-h-11 items-center justify-center gap-1.5 rounded-full border px-4 text-xs font-semibold transition-all",
+        active
+          ? "border-brand bg-brand-muted/40 text-brand shadow-sm"
+          : "border-border text-muted-foreground hover:border-brand/40 hover:text-foreground"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ToggleRow({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        <div className="text-sm font-medium">{label}</div>
+        {hint && <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>}
+      </div>
+      {/* 48px touch target with springy Framer Motion knob */}
+      <button
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={cn(
+          "relative h-8 w-14 shrink-0 rounded-full transition-colors",
+          checked ? "bg-brand" : "bg-muted"
+        )}
+      >
+        <motion.span
+          layout
+          transition={{ type: "spring", stiffness: 500, damping: 32 }}
+          className={cn(
+            "absolute top-1 size-6 rounded-full bg-white shadow-md",
+            checked ? "right-1" : "right-7"
+          )}
+        />
+      </button>
+    </div>
+  );
+}
+
+function ActionCard({
+  icon: Icon,
+  label,
+  sub,
+  onClick,
+  input,
+}: {
+  icon: typeof Download;
+  label: string;
+  sub: string;
+  onClick: () => void;
+  input?: React.ReactNode;
+}) {
+  return (
+    <>
+      <button
+        onClick={onClick}
+        className="flex min-h-11 items-center gap-3 rounded-2xl border border-border bg-white/5 p-4 text-right transition-colors hover:border-brand/40"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-muted/50 text-brand">
+          <Icon className="size-5" />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold">{label}</span>
+          <span className="block text-[11px] text-muted-foreground">{sub}</span>
+        </span>
+      </button>
+      {input}
+    </>
   );
 }

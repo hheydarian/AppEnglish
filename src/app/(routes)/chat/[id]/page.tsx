@@ -10,11 +10,13 @@ export function generateStaticParams() {
   const scenarioIds = SCENARIOS.map((s) => ({ id: s.id }));
   // All lessons across every level (A0–C2) get a chat route.
   const lessonIds = ALL_LESSONS.map((l) => ({ id: l.id }));
-  return [...scenarioIds, ...lessonIds];
+  // Special persona-only chats (no curriculum lesson) are listed explicitly.
+  return [...scenarioIds, ...lessonIds, { id: "exam-oral" }];
 }
 
-// Allow A0 lesson ids not in the static set (dev + non-A0 future lessons).
-export const dynamicParams = true;
+// Static export requires exhaustive params — every lesson id (A0–C2) plus
+// the special exam-oral persona is generated above, so nothing else is needed.
+export const dynamicParams = false;
 
 /**
  * NOTE: In Next.js 16, `params` is a Promise and must be awaited.

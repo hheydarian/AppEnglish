@@ -5,8 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Volume2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { VocabCard } from "@/types";
 import { useTTS } from "@/hooks/useTTS";
+import { useSettingsStore } from "@/store/settingsStore";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { toPersianDigits } from "@/lib/utils";
+import { tap } from "@/lib/feedback";
 
 interface VocabStepProps {
   cards: VocabCard[];
@@ -19,13 +21,34 @@ interface VocabStepProps {
  */
 export function VocabStep({ cards, onDone }: VocabStepProps) {
   const [index, setIndex] = useState(0);
-  const tts = useTTS({ lang: "en-US", rate: 0.85 });
+  // Global Settings: narrator voice + optional Persian "challenge mode".
+  const settingsVoice = useSettingsStore((s) => s.voiceGender);
+  const settingsAccent = useSettingsStore((s) => s.accent);
+  const settingsShowFa = useSettingsStore((s) => s.showPersianTranslation);
+  const tts = useTTS({
+    lang: settingsAccent === "uk" ? "en-GB" : settingsAccent === "au" ? "en-AU" : "en-US",
+    rate: 0.85,
+    voiceGender: settingsVoice,
+  });
+  // In challenge mode the Persian meaning is hidden until the learner taps.
+  const [revealed, setRevealed] = useState(false);
 
   const card = cards[index];
   const isLast = index === cards.length - 1;
 
-  const next = () => (isLast ? onDone() : setIndex((i) => i + 1));
-  const prev = () => setIndex((i) => Math.max(0, i - 1));
+  const next = () => {
+    setRevealed(false);
+    tap();
+    if (isLast) {
+      onDone();
+    } else {
+      setIndex((i) => i + 1);
+    }
+  };
+  const prev = () => {
+    setRevealed(false);
+    setIndex((i) => Math.max(0, i - 1));
+  };
 
   const speak = () => tts.speak(card.term);
 
@@ -86,8 +109,20 @@ export function VocabStep({ cards, onDone }: VocabStepProps) {
                 </p>
               )}
 
-              {/* Persian meaning */}
-              <p className="mt-3 text-lg font-medium text-brand">{card.meaning}</p>
+              {/* Persian meaning — hidden in challenge mode until tapped */}
+              {settingsShowFa || revealed ? (
+                <p className="mt-3 text-lg font-medium text-brand">{card.meaning}</p>
+              ) : (
+                <button
+                  onClick={() => {
+                    setRevealed(true);
+                    tap();
+                  }}
+                  className="mt-3 rounded-full border border-brand/30 bg-brand-muted/30 px-4 py-1.5 text-xs font-semibold text-brand"
+                >
+                  نمایش معنی 👁
+                </button>
+              )}
 
               {/* Example */}
               <p

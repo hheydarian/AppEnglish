@@ -729,6 +729,17 @@ export function getStageByLevel(level: CurriculumStage["level"]) {
 export const TOTAL_LESSONS = ALL_LESSONS.length;
 
 /**
+ * The golden finale of the learning tree — rendered after C2 on the homepage
+ * as a distinct diamond/gold card linking to the certification exam.
+ */
+export const GRAND_EXAM = {
+  href: "/exam",
+  oralHref: "/chat/exam-oral",
+  title: "آزمون نهایی استادی",
+  subtitle: "۴ مهارت، استاندارد IELTS/CEFR — گواهی تسلط بگیر!",
+} as const;
+
+/**
  * Get the interactive content (4-step flow) for a lesson.
  * Falls back to undefined for roleplay-only lessons (they go straight to chat).
  */

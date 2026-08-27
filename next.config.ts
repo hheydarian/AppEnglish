@@ -1,27 +1,55 @@
 import type { NextConfig } from "next";
 
 /**
+ * SECURITY: strip console output from production bundles.
+ * Keeps `error` and `warn` for diagnosability; removes log/debug/info so no
+ * internal state leaks into shipped JS (OWASP MASVS-RESILIENCE).
+ *
  * When building for Capacitor (APK), we produce a fully static export.
  * Trigger with: CAPACITOR_BUILD=1 npm run build
- *
- * Notes:
- *  - Static export can't ship a server route handler, so in Capacitor mode
- *    the client talks to a browser-side AI client (lib/ai/client.ts) that
- *    calls the OpenAI API directly using the user's personal key (set in
- *    Settings), with the deterministic mock as a fallback.
- *  - The /api/chat route is still available in normal (non-export) dev/preview.
  */
 const isCapacitorBuild = process.env.CAPACITOR_BUILD === "1";
+const isProd = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
+  compiler: {
+    removeConsole: isProd
+      ? { exclude: ["error", "warn"] }
+      : false,
+  },
+
+  // Security headers for the web build. In the Capacitor static export the
+  // native WebView shell enforces the same policy via the CSP <meta> tag in
+  // src/app/layout.tsx, so the two surfaces stay aligned.
+  async headers() {
+    if (!isProd) return [];
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value:
+              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.openai.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+          },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value:
+              "microphone=(self), camera=(), geolocation=(), payment=(), usb=()",
+          },
+        ],
+      },
+    ];
+  },
+
   // Enable static export only for the Capacitor (APK) build.
   ...(isCapacitorBuild
     ? {
         output: "export" as const,
-        // Dynamic routes need an exhaustive list of params; for the chat page
-        // we generate one page per scenario.
         images: { unoptimized: true },
-        // trailing slash helps WebView resolve local file URLs reliably.
         trailingSlash: true,
       }
     : {}),

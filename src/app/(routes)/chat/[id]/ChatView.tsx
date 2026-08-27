@@ -15,6 +15,7 @@ import { VoiceRecorderButton } from "@/components/voice/VoiceRecorderButton";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { tap } from "@/lib/feedback";
 import {
   useSettingsStore,
   ACCENT_TO_LOCALE,
@@ -34,10 +35,11 @@ export default function ChatView({ scenarioId }: { scenarioId: string }) {
   const setRecording = useChatStore((s) => s.setRecording);
   const setSpeaking = useChatStore((s) => s.setSpeaking);
 
-  /* ---- settings (level, accent, rate) ---- */
+  /* ---- settings (level, accent, rate, voice gender) ---- */
   const proficiency = useSettingsStore((s) => s.proficiency);
   const accent = useSettingsStore((s) => s.accent);
   const ttsRate = useSettingsStore((s) => s.ttsRate);
+  const voiceGender = useSettingsStore((s) => s.voiceGender);
   const setAccent = useSettingsStore((s) => s.setAccent);
   const setTtsRate = useSettingsStore((s) => s.setTtsRate);
   const locale = ACCENT_TO_LOCALE[accent];
@@ -53,8 +55,8 @@ export default function ChatView({ scenarioId }: { scenarioId: string }) {
   });
 
   /* ---- TTS (normal + a slow instance for the "Replay slow" button) ---- */
-  const tts = useTTS({ lang: locale, rate: ttsRate });
-  const ttsSlow = useTTS({ lang: locale, rate: Math.max(0.5, ttsRate * 0.6) });
+  const tts = useTTS({ lang: locale, rate: ttsRate, voiceGender });
+  const ttsSlow = useTTS({ lang: locale, rate: Math.max(0.5, ttsRate * 0.6), voiceGender });
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(
     null
   );
@@ -97,6 +99,7 @@ export default function ChatView({ scenarioId }: { scenarioId: string }) {
   const submitText = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!draft.trim()) return;
+    tap();
     sendMessage(draft, "text");
     setDraft("");
   };
@@ -231,11 +234,11 @@ export default function ChatView({ scenarioId }: { scenarioId: string }) {
 
         {/* Accent toggle US/UK */}
         <button
-          onClick={() => setAccent(accent === "us" ? "uk" : "us")}
+          onClick={() => setAccent(accent === "us" ? "uk" : accent === "uk" ? "au" : "us")}
           className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 transition-colors hover:bg-muted"
           aria-label="لهجه"
         >
-          {accent === "us" ? "🇺🇸 US" : "🇬🇧 UK"}
+          {accent === "us" ? "🇺🇸 US" : accent === "uk" ? "🇬🇧 UK" : "🇦🇺 AU"}
         </button>
 
         {/* Replay last AI message slowly */}

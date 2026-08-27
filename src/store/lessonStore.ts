@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { secureStorage } from "@/lib/secureStorage";
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -66,7 +67,7 @@ export const useLessonStore = create<LessonState>()(
     }),
     {
       name: "speakup-lessons",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => secureStorage),
     }
   )
 );

@@ -3,7 +3,6 @@
 import { useCallback, useRef, useState } from "react";
 import { useChatStore } from "@/store/chatStore";
 import { useUserStore } from "@/store/userStore";
-import { useSettingsStore } from "@/store/settingsStore";
 import { generateReplySafe } from "@/lib/ai";
 import type { ChatRequestBody } from "@/lib/ai/types";
 import type { CEFRLevel, ChatMessage, MessageMode } from "@/types";
@@ -75,8 +74,6 @@ export function useChat({
       setIsThinkingState(true);
 
       try {
-        // Read the latest user API key at call time (no re-render needed).
-        const { apiKey: userApiKey } = useSettingsStore.getState();
         const payload: ChatRequestBody = {
           scenarioId,
           // Only user/assistant turns are sent; system lines stay server-side.
@@ -91,7 +88,6 @@ export function useChat({
             })),
           level,
           language,
-          ...(userApiKey ? { userApiKey } : {}),
         };
 
         // Works both in the web build (→ /api/chat) and in the Capacitor

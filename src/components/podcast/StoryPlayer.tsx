@@ -6,6 +6,7 @@ import { Play, Pause, SkipBack, SkipForward, Gauge, Check, X, Trophy, RotateCcw 
 import type { Story } from "@/types";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useTTS } from "@/hooks/useTTS";
+import { useSettingsStore } from "@/store/settingsStore";
 import { cn, toPersianDigits } from "@/lib/utils";
 
 type VoiceGender = "female" | "male";
@@ -28,12 +29,22 @@ interface StoryPlayerProps {
  * narration labels and English sentences never tangle.
  */
 export function StoryPlayer({ story }: StoryPlayerProps) {
+  // Initialize player controls from global Settings, then allow local override.
+  const settingsVoice = useSettingsStore((s) => s.voiceGender);
+  const settingsAccent = useSettingsStore((s) => s.accent);
+  const settingsShowFa = useSettingsStore((s) => s.showPersianTranslation);
+
   const [index, setIndex] = useState(0);          // current line
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1.0);
-  const [accent, setAccent] = useState<"us" | "uk">("us");
-  const [voiceGender, setVoiceGender] = useState<VoiceGender>("female");
+  // The player narrates in US/UK; AU falls back to UK voices here.
+  const [accent, setAccent] = useState<"us" | "uk">(
+    settingsAccent === "us" ? "us" : "uk"
+  );
+  const [voiceGender, setVoiceGender] = useState<VoiceGender>(settingsVoice);
   const [showQuiz, setShowQuiz] = useState(false);
+  // Persian translations can be toggled per-story (challenge mode).
+  const [showFa, setShowFa] = useState(settingsShowFa);
 
   const total = story.lines.length;
 
@@ -146,6 +157,19 @@ export function StoryPlayer({ story }: StoryPlayerProps) {
           <Gauge className="size-3.5" />
           {speed.toFixed(2)}×
         </button>
+        {/* Persian translation toggle (challenge mode) */}
+        <button
+          onClick={() => setShowFa((v) => !v)}
+          className={cn(
+            "rounded-full border px-3 py-1.5 text-xs transition-colors",
+            showFa
+              ? "border-brand/40 bg-brand-muted/40 text-brand"
+              : "border-border hover:bg-muted"
+          )}
+          aria-pressed={showFa}
+        >
+          ترجمه {showFa ? "👁" : "🙈"}
+        </button>
       </div>
 
       {/* Progress */}
@@ -184,8 +208,10 @@ export function StoryPlayer({ story }: StoryPlayerProps) {
               <div dir="ltr" className={cn("font-sans text-base", isActive && "font-bold text-brand")}>
                 {l.en}
               </div>
-              {/* Persian translation */}
-              <p className="mt-1.5 text-xs text-muted-foreground">{l.fa}</p>
+              {/* Persian translation — hidden in challenge mode (showFa off) */}
+              {showFa && (
+                <p className="mt-1.5 text-xs text-muted-foreground">{l.fa}</p>
+              )}
             </motion.button>
           );
         })}

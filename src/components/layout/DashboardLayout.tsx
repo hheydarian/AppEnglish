@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
 import { DashboardSidebar } from "./DashboardSidebar";
+import { useSettingsStore } from "@/store/settingsStore";
 import { cn } from "@/lib/utils";
 
 /**
@@ -40,10 +41,13 @@ export function DashboardLayout({
   hideNav = false,
   className,
 }: DashboardLayoutProps) {
+  // Settings → Reduce Motion disables the 3D backdrop entirely (perf).
+  const reduceMotion = useSettingsStore((s) => s.reduceMotion);
+
   return (
     <div className="relative min-h-dvh w-full overflow-hidden bg-background">
       {/* Ambient 3D backdrop (decorative) */}
-      {ambient3d && (
+      {ambient3d && !reduceMotion && (
         <div
           aria-hidden
           className="pointer-events-none fixed inset-0 -z-10 opacity-50"

@@ -389,5 +389,83 @@ export interface Story {
   tags: string[];
 }
 
+/* ========================================================================== */
+/*  Grand Mastery Exam & Certification                                        */
+/* ========================================================================== */
+
+/** Accent used by a listening task's TTS narration. */
+export type ExamAccent = 'us' | 'uk';
+
+/** A multiple-choice question (used in Listening & Use of English). */
+export interface ExamQuestion {
+  id: string;
+  /** Persian prompt. */
+  prompt: string;
+  /** English options (rendered LTR-isolated). */
+  options: string[];
+  /** Index of the correct option. */
+  correctIndex: number;
+}
+
+/** Section 1 — a listening task narrated by TTS in a given accent. */
+export interface ExamListeningTask {
+  id: string;
+  accent: ExamAccent;
+  /** Persian scene-setting line, e.g. «پیام اعلام فرودگاه». */
+  context: string;
+  /** The English passage the TTS reads aloud. */
+  passage: string;
+  questions: ExamQuestion[];
+}
+
+/** Section 3 — arrange shuffled words into the correct sentence. */
+export interface ExamSentenceTask {
+  id: string;
+  /** Persian instruction. */
+  prompt: string;
+  /** Words in the correct order (shuffled for display). */
+  words: string[];
+  /** The correct full sentence (compared via normalizeText). */
+  correctSentence: string;
+}
+
+/** Section 4 — one examiner question in the oral interview. */
+export interface ExamOralQuestion {
+  id: string;
+  /** Cognitive level of the question. */
+  tier: 'describe' | 'analyze' | 'evaluate';
+  /** The English question (read aloud by TTS). */
+  question: string;
+  /** Persian translation shown beneath. */
+  questionFa: string;
+}
+
+/** The full Grand Mastery Exam content. */
+export interface MasteryExam {
+  listening: ExamListeningTask[];
+  useOfEnglish: ExamQuestion[];
+  syntax: ExamSentenceTask[];
+  oral: ExamOralQuestion[];
+}
+
+/** Per-section scores of a completed exam attempt. */
+export interface ExamSectionScores {
+  listening: number;   // 0–100
+  useOfEnglish: number; // 0–100
+  syntax: number;       // 0–100
+  oral: number;         // 0–100
+  total: number;        // 0–100 weighted
+}
+
+/** Maps a total percentage to a CEFR-equivalent label. */
+export function cefrFromScore(total: number): { level: string; label: string } {
+  if (total >= 90) return { level: 'C2', label: 'تسلط کامل — Mastery' };
+  if (total >= 75) return { level: 'C1', label: 'پیشرفته — Advanced' };
+  if (total >= 60) return { level: 'B2', label: 'متوسط پیشرفته — Vantage' };
+  if (total >= 45) return { level: 'B1', label: 'متوسط — Threshold' };
+  if (total >= 30) return { level: 'A2', label: 'پیش‌متوسطه — Waystage' };
+  return { level: 'A1', label: 'مقدماتی — Breakthrough' };
+}
+
 
 

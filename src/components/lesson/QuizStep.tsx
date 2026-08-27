@@ -8,6 +8,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { BidiText } from "@/components/ui/BidiText";
 import { Button } from "@/components/ui/button";
 import { cn, toPersianDigits, normalizeText } from "@/lib/utils";
+import { tap, success, error as errorSound } from "@/lib/feedback";
 
 interface QuizStepProps {
   questions: QuizQuestion[];
@@ -77,8 +78,13 @@ export function QuizStep({ questions, onDone }: QuizStepProps) {
 
   const q = questions[index];
   const onNext = () => {
-    if (index < questions.length - 1) setIndex((i) => i + 1);
-    else setFinished(true);
+    if (index < questions.length - 1) {
+      tap();
+      setIndex((i) => i + 1);
+    } else {
+      success();
+      setFinished(true);
+    }
   };
 
   return (
@@ -95,9 +101,31 @@ export function QuizStep({ questions, onDone }: QuizStepProps) {
           className="w-full max-w-md"
         >
           {q.kind === "multiple-choice" ? (
-            <MultipleChoice q={q} onResult={(ok) => ok && setScore((s) => s + 1)} onNext={onNext} />
+            <MultipleChoice
+              q={q}
+              onResult={(ok) => {
+                if (ok) {
+                  success();
+                  setScore((s) => s + 1);
+                } else {
+                  errorSound();
+                }
+              }}
+              onNext={onNext}
+            />
           ) : (
-            <WordOrder q={q} onResult={(ok) => ok && setScore((s) => s + 1)} onNext={onNext} />
+            <WordOrder
+              q={q}
+              onResult={(ok) => {
+                if (ok) {
+                  success();
+                  setScore((s) => s + 1);
+                } else {
+                  errorSound();
+                }
+              }}
+              onNext={onNext}
+            />
           )}
         </motion.div>
       </AnimatePresence>

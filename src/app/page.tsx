@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Flame, Trophy, ArrowLeft, BookOpen, Headphones } from "lucide-react";
 import Link from "next/link";
@@ -7,14 +8,31 @@ import { DashboardLayout } from "@/components/layout";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Icon } from "@/components/ui/Icon";
 import { LessonCard } from "@/components/curriculum/LessonCard";
-import { CURRICULUM, TOTAL_LESSONS } from "@/data/curriculum";
+import { CURRICULUM, TOTAL_LESSONS, GRAND_EXAM } from "@/data/curriculum";
 import { useUserStore } from "@/store/userStore";
+import { useSettingsStore } from "@/store/settingsStore";
 import { cn, toPersianDigits } from "@/lib/utils";
 
 export default function Home() {
   const streak = useUserStore((s) => s.streakDays);
   const points = useUserStore((s) => s.totalPoints);
   const lessonsDone = useUserStore((s) => s.completedScenarios.length);
+
+  // Focus the user's default level band (Settings → Learning) on first load.
+  const defaultLevel = useSettingsStore((s) => s.defaultLevel);
+  useEffect(() => {
+    const target =
+      defaultLevel === "intermediate"
+        ? "stage-B1"
+        : defaultLevel === "advanced"
+          ? "stage-C1"
+          : null; // "beginner" sits at the top — no scroll needed.
+    if (!target) return;
+    const t = setTimeout(() => {
+      document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 700);
+    return () => clearTimeout(t);
+  }, [defaultLevel]);
 
   return (
     <DashboardLayout>
@@ -120,6 +138,7 @@ export default function Home() {
           {CURRICULUM.map((stage, si) => (
             <motion.div
               key={stage.level}
+              id={`stage-${stage.level}`}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-80px" }}
@@ -160,6 +179,47 @@ export default function Home() {
             </motion.div>
           ))}
         </div>
+
+        {/* ============ GRAND MASTERY EXAM — the golden finale ============ */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          className="mt-10"
+        >
+          <Link href={GRAND_EXAM.href} className="block focus-visible:outline-none">
+            <div
+              className="group relative overflow-hidden rounded-[2rem] border-2 border-amber-400/40 bg-gradient-to-br from-amber-500/15 via-card to-yellow-600/10 p-6 backdrop-blur-2xl shadow-[0_20px_80px_-20px_rgba(245,158,11,0.35)] transition-all hover:border-amber-400/70"
+            >
+              {/* glows */}
+              <div aria-hidden className="pointer-events-none absolute -right-12 -top-12 size-40 rounded-full bg-amber-400/25 blur-3xl" />
+              <div aria-hidden className="pointer-events-none absolute -left-12 -bottom-12 size-32 rounded-full bg-teal-400/15 blur-3xl" />
+              <div className="relative flex items-center gap-5">
+                <motion.div
+                  animate={{ rotate: [0, 8, -8, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-700 text-white shadow-xl shadow-amber-500/40"
+                >
+                  <Trophy className="size-8" />
+                </motion.div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-lg font-extrabold text-amber-400">{GRAND_EXAM.title}</h3>
+                    <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold text-amber-500">
+                      The Grandmaster Exam 🏆
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">{GRAND_EXAM.subtitle}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    دروازه‌ی پایانی بعد از C2 — شنیداری دو‌لهجه، گرامر، جمله‌سازی و
+                    مصاحبه‌ی شفاهی با ممتحن ارشد.
+                  </p>
+                </div>
+                <ArrowLeft className="size-6 shrink-0 text-amber-400 transition-transform group-hover:-translate-x-1" />
+              </div>
+            </div>
+          </Link>
+        </motion.div>
 
         <p className="mt-10 text-center text-xs text-muted-foreground">
           هر درسی تموم که بشه، قفل بعدی باز می‌شه. ادامه بده، استاد! 🎓

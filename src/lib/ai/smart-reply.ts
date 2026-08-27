@@ -320,6 +320,14 @@ function contextualPool(
         "So inspiring! What's your next big goal?",
       ];
 
+    case "exam-oral": // The Chief Examiner — acknowledge, then probe deeper
+      return [
+        "Noted — you described that clearly. Now analyze it: why do you think that decision had such an impact?",
+        "A fair attempt, though somewhat general. Could you substantiate that with a concrete example?",
+        "Interesting reasoning. Let us weigh the other side — what would a critic of your position say?",
+        "You have touched on causes; now synthesize: what broader conclusion follows from your analysis?",
+      ];
+
     default: {
       // C2 lessons get a witty, native-mastery pool.
       if (scenario.difficulty === "C2") {

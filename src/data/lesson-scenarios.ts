@@ -18,6 +18,8 @@ import { getScenarioById } from "./scenarios";
 interface LessonPersona {
   role: string;
   avatar: string;
+  /** Optional Persian title used when the id has no curriculum lesson. */
+  title?: string;
   persona: string;
   opening: string;
   objectives: string[];
@@ -542,6 +544,20 @@ const LESSON_PERSONAS: Record<string, LessonPersona> = {
   "c2-8-1": C2_GENERIC("Vocabulary Sage", "💎", "the ultimate lexicon — epitome, serendipity, ephemeral, quintessence. Deploy rare gems precisely."),
   "c2-8-2": C2_GENERIC("Structure Alchemist", "⚗️", "combining inversion + subjunctive + cleft in single clauses. Weave every advanced structure together."),
   "c2-8-3": C2_GENERIC("The Grandmaster", "👑", "the final crucible: free, multi-topic mastery discourse. Award the Grandmaster Badge to worthy candidates.", "So — you've reached the summit. One final conversation, no limits, no safety net. Show me mastery, and the badge is yours. Begin."),
+
+  /* ----- Special exam persona (not tied to a curriculum lesson) ----- */
+  "exam-oral": {
+    role: "The Chief Examiner",
+    avatar: "🎓",
+    title: "مصاحبه‌ی شفاهی آزمون استادی",
+    persona:
+      "You are The Chief Examiner of the SpeakUp Grand Mastery Exam — rigorous, impartial, but genuinely encouraging. Conduct a three-part oral interview: (1) description — a pivotal life decision; (2) causal analysis — why cross-cultural communication breaks down; (3) philosophical synthesis — whether language mastery equals thought mastery. Ask one question at a time. Acknowledge strengths precisely, probe vague answers ('Could you substantiate that?'), and never accept empty rhetoric. Use C2-level English.",
+    opening:
+      "Good day. I am The Chief Examiner for the Grand Mastery certification. This oral interview has three parts: description, causal analysis, and philosophical synthesis. Take your time — clarity of thought matters more than speed. Shall we begin with the first question? Tell me about a decision that changed the direction of your life.",
+    objectives: ["ارزیابی رسمی شفاهی C2", "توصیف، تحلیل و نتیجه‌گیری"],
+    difficulty: "C2",
+    category: "education",
+  },
 };
 
 /**
@@ -557,18 +573,23 @@ export function resolveChatScenario(id: string): Scenario | undefined {
   if (base) return base;
 
   const persona = LESSON_PERSONAS[id];
+  if (!persona) return undefined;
+
+  // Most ids map to a curriculum lesson; special ids (e.g. "exam-oral")
+  // are persona-only and synthesize a scenario from the persona itself.
   const lesson = getLessonById(id);
-  if (!persona || !lesson) return undefined;
+  if (!lesson && !persona.title) return undefined;
 
   return {
     id,
-    title: lesson.title,
-    description: lesson.description,
+    title: lesson?.title ?? persona.title!,
+    description:
+      lesson?.description ?? "مصاحبه‌ی تخصصی با هوش مصنوعی SpeakUp",
     category: persona.category,
-    icon: lesson.icon,
+    icon: lesson?.icon ?? "GraduationCap",
     difficulty: persona.difficulty,
     language: "en",
-    tags: ["lesson-practice", lesson.level],
+    tags: ["lesson-practice", lesson?.level ?? "C2"],
     role: {
       name: persona.role,
       persona: persona.persona,
@@ -576,6 +597,6 @@ export function resolveChatScenario(id: string): Scenario | undefined {
     },
     opening: persona.opening,
     objectives: persona.objectives,
-    estimatedMinutes: lesson.estimatedMinutes,
+    estimatedMinutes: lesson?.estimatedMinutes ?? 10,
   };
 }

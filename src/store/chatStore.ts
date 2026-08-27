@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { secureStorage } from "@/lib/secureStorage";
 import type {
   ChatMessage,
   ChatSession,
@@ -149,7 +150,7 @@ export const useChatStore = create<ChatState>()(
     }),
     {
       name: "speakup-chat",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => secureStorage),
       // Only persist the session itself, not transient UI flags.
       partialize: (state) => ({ session: state.session }),
     }
