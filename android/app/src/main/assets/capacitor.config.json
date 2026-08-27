@@ -1,0 +1,13 @@
+{
+	"appId": "com.speakup.app",
+	"appName": "SpeakUp",
+	"webDir": "out",
+	"android": {
+		"allowMixedContent": false,
+		"captureInput": true
+	},
+	"server": {
+		"androidScheme": "https",
+		"cleartext": false
+	}
+}
