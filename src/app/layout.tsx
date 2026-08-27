@@ -21,16 +21,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "SpeakUp — تمرین زبان با هوش مصنوعی",
-    template: "%s | SpeakUp",
+    default: "ZabanYar — تمرین زبان با هوش مصنوعی",
+    template: "%s | ZabanYar",
   },
   description:
     "اپلیکیشن هوشمند آموزش و تمرین زبان: مکالمه صوتی و متنی با هوش مصنوعی در سناریوهای واقعی، همراه با اصلاحات لحظه‌ای گرامر و تلفظ.",
-  applicationName: "SpeakUp",
+  applicationName: "ZabanYar",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "SpeakUp",
+    title: "ZabanYar",
   },
   formatDetection: {
     telephone: false,
