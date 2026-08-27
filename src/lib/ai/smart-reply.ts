@@ -321,6 +321,15 @@ function contextualPool(
       ];
 
     default: {
+      // C2 lessons get a witty, native-mastery pool.
+      if (scenario.difficulty === "C2") {
+        return [
+          "Sharp. Though I'd warrant there's a nuance you're circling but not quite landing — care to try?",
+          "Fair point, well made. Now flip it — argue the other side with equal conviction.",
+          "Now that's the kind of turn of phrase I'd expect from a native. Where did you pick that up?",
+          "I'll concede that. But you've dodged the rather elephantine question in the room, haven't you?",
+        ];
+      }
       // C1 lessons get a rigorous, academically challenging pool.
       if (scenario.difficulty === "C1") {
         return [

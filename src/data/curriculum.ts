@@ -5,6 +5,7 @@ import { A2_LESSON_CONTENT } from "./a2-content";
 import { B1_LESSON_CONTENT } from "./b1-content";
 import { B2_LESSON_CONTENT } from "./b2-content";
 import { C1_LESSON_CONTENT } from "./c1-content";
+import { C2_LESSON_CONTENT } from "./c2-content";
 
 /**
  * The SpeakUp Learning Tree — a complete path from absolute zero (A0) to
@@ -651,23 +652,58 @@ export const CURRICULUM: CurriculumStage[] = [
     ],
   },
 
+  /* ==================================================================== */
+  /*  C2 — Mastery & Native Fluency (FINAL: 8 units × 3 lessons)          */
+  /* ==================================================================== */
   {
     level: "C2",
     label: "تسلط کامل",
-    subtitle: "استاد زبان! اینجا بحث‌های عمیق و ادبی در انتظارته.",
+    subtitle: "آرگو، بلاغت، حقوق و آزمون نهایی استادی — درخت یادگیری کامل می‌شود!",
     icon: "Crown",
     accent: "rose",
     lessons: [
-      {
-        id: "c2-master",
-        title: "گفتگوی استاد",
-        description: "آخرین چالش: یه مکالمه‌ی کاملاً آزاد و عمیق.",
-        type: "challenge",
-        level: "C2",
-        icon: "Trophy",
-        estimatedMinutes: 30,
-        locked: true,
-      },
+      // Unit 1: Slang & street wit
+      { id: "c2-1-1", title: "آرگو و اصطلاحات بومی", description: "banter, dodge a bullet, through the grapevine...", type: "vocab", level: "C2", icon: "MessagesSquare", estimatedMinutes: 12 },
+      { id: "c2-1-2", title: "حذف‌های گفتار بومی", description: "Seen him lately? / No point doing that — Ellipsis!", type: "grammar", level: "C2", icon: "Scissors", estimatedMinutes: 14 },
+      { id: "c2-1-3", title: "مکالمه: گپ دوستانه", description: "با یه بومی واقعی گپ بزن و شوخی کن!", type: "roleplay", level: "C2", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 2: Irony & puns
+      { id: "c2-2-1", title: "کنایه و بازی کلمات", description: "pun, tongue-in-cheek, deadpan, sardonic...", type: "vocab", level: "C2", icon: "Theater", estimatedMinutes: 12 },
+      { id: "c2-2-2", title: "تناقض‌نما و کم‌گویی", description: "Deafening silence / Not bad at all! — ظرافت!", type: "grammar", level: "C2", icon: "Contrast", estimatedMinutes: 14 },
+      { id: "c2-2-3", title: "مکالمه: استندآپ کمدی", description: "بداهه‌گویی و شوخی با کمدین!", type: "roleplay", level: "C2", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 3: Rhetoric & oratory
+      { id: "c2-3-1", title: "آرایه‌های سخنوری", description: "anaphora, chiasmus, hypophora, antithesis...", type: "vocab", level: "C2", icon: "Mic", estimatedMinutes: 12 },
+      { id: "c2-3-2", title: "قانون سه‌گانه", description: "We shall fight, we shall strive, we shall conquer!", type: "grammar", level: "C2", icon: "ListOrdered", estimatedMinutes: 14 },
+      { id: "c2-3-3", title: "مکالمه: نطق انگیزشی", description: "مانیفستت رو با بلاغت دفاع کن!", type: "roleplay", level: "C2", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 4: Literary grandeur
+      { id: "c2-4-1", title: "میراث شکسپیر", description: "brave new world, heart of gold, wild-goose chase...", type: "vocab", level: "C2", icon: "Feather", estimatedMinutes: 12 },
+      { id: "c2-4-2", title: "ساختارهای کهن", description: "Be that as it may / Come what may — فاخره!", type: "grammar", level: "C2", icon: "Scroll", estimatedMinutes: 14 },
+      { id: "c2-4-3", title: "مکالمه: مشاعره نثری", description: "با استاد ادبیات زیبایی‌شناسی کن!", type: "roleplay", level: "C2", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 5: Legalese
+      { id: "c2-5-1", title: "زبان حقوقی", description: "indemnify, force majeure, in perpetuity...", type: "vocab", level: "C2", icon: "Scale", estimatedMinutes: 12 },
+      { id: "c2-5-2", title: "شرطی‌های قراردادی", description: "Herein / Whereby / Provided that...", type: "grammar", level: "C2", icon: "FileText", estimatedMinutes: 14 },
+      { id: "c2-5-3", title: "مکالمه: وکیل ارشد", description: "بندهای قرارداد سرمایه‌گذاری رو بازبینی کن!", type: "roleplay", level: "C2", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 6: Crisis communication
+      { id: "c2-6-1", title: "خنثی‌سازی حمله کلامی", description: "deflect, spin doctor, ad hominem, straw man...", type: "vocab", level: "C2", icon: "ShieldAlert", estimatedMinutes: 12 },
+      { id: "c2-6-2", title: "محورچرخانی دیپلماتیک", description: "That raises a broader question... — تکنیک!", type: "grammar", level: "C2", icon: "Compass", estimatedMinutes: 14 },
+      { id: "c2-6-3", title: "مکالمه: کنفرانس بحران", description: "به خبرنگاران پرشور در بحران جواب بده!", type: "roleplay", level: "C2", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 7: Interpretation
+      { id: "c2-7-1", title: "ترجمه‌ناپذیرها", description: "culture-bound idioms, false friends, calque...", type: "vocab", level: "C2", icon: "Languages", estimatedMinutes: 12 },
+      { id: "c2-7-2", title: "بازآفرینی معنا", description: "Dynamic equivalence / chunking / anticipation!", type: "grammar", level: "C2", icon: "ArrowLeftRight", estimatedMinutes: 14 },
+      { id: "c2-7-3", title: "مکالمه: ترجمه هم‌زمان", description: "سخنرانی رو در اجلاس دوزبانه ترجمه کن!", type: "roleplay", level: "C2", icon: "MessagesSquare", estimatedMinutes: 8 },
+      // Unit 8: Grandmaster's crucible
+      { id: "c2-8-1", title: "واژگان غایی استادی", description: "epitome, serendipity, ephemeral, ubiquitous...", type: "vocab", level: "C2", icon: "Crown", estimatedMinutes: 12 },
+      { id: "c2-8-2", title: "ترکیب ساختارها", description: "Inversion + Subjunctive + Cleft در یک بند!", type: "grammar", level: "C2", icon: "Sparkles", estimatedMinutes: 14 },
+      { id: "c2-8-3", title: "مکالمه: آزمون استادی", description: "مکالمه آزاد چندموضوعی → نشان استادی زبان! 👑", type: "roleplay", level: "C2", icon: "Trophy", estimatedMinutes: 10 },
+    ],
+    units: [
+      { id: "c2-u1", title: "آرگو و طنز کوچه", subtitle: "گفتار بومی", icon: "MessagesSquare", lessons: [] },
+      { id: "c2-u2", title: "کنایه و شوخی", subtitle: "طنز چندلایه", icon: "Theater", lessons: [] },
+      { id: "c2-u3", title: "بلاغت و سخنوری", subtitle: "متقاعدسازی", icon: "Mic", lessons: [] },
+      { id: "c2-u4", title: "ادبیات کهن", subtitle: "میراث شکسپیر", icon: "Feather", lessons: [] },
+      { id: "c2-u5", title: "زبان حقوقی", subtitle: "قرارداد فاخر", icon: "Scale", lessons: [] },
+      { id: "c2-u6", title: "مدیریت بحران", subtitle: "مناظره تند", icon: "ShieldAlert", lessons: [] },
+      { id: "c2-u7", title: "ترجمه و ظرافت", subtitle: "مفاهیم نایاب", icon: "Languages", lessons: [] },
+      { id: "c2-u8", title: "آزمون استادی", subtitle: "نشان نهایی 👑", icon: "Trophy", lessons: [] },
     ],
   },
 ];
@@ -706,6 +742,7 @@ export function getLessonContent(
     ...B1_LESSON_CONTENT,
     ...B2_LESSON_CONTENT,
     ...C1_LESSON_CONTENT,
+    ...C2_LESSON_CONTENT,
   };
   return all[lessonId];
 }

@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // External agent-tool skill scripts (Windsurf/Warp) — not project code.
+    ".windsurf/**",
+    ".warp/**",
   ]),
 ]);
 

@@ -8,15 +8,8 @@ import ChatView from "./ChatView";
  */
 export function generateStaticParams() {
   const scenarioIds = SCENARIOS.map((s) => ({ id: s.id }));
-  const lessonIds = ALL_LESSONS.filter(
-    (l) =>
-      l.level === "A0" ||
-      l.level === "A1" ||
-      l.level === "A2" ||
-      l.level === "B1" ||
-      l.level === "B2" ||
-      l.level === "C1"
-  ).map((l) => ({ id: l.id }));
+  // All lessons across every level (A0–C2) get a chat route.
+  const lessonIds = ALL_LESSONS.map((l) => ({ id: l.id }));
   return [...scenarioIds, ...lessonIds];
 }
 
