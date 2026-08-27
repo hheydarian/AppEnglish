@@ -25,12 +25,24 @@ export const metadata: Metadata = {
     template: "%s | ZabanYar",
   },
   description:
-    "اپلیکیشن هوشمند آموزش و تمرین زبان: مکالمه صوتی و متنی با هوش مصنوعی در سناریوهای واقعی، همراه با اصلاحات لحظه‌ای گرامر و تلفظ.",
+    "اپلیکیشن هوشمند آموزش و تمرین زبان انگلیسی از A0 تا C2: مکالمه صوتی با هوش مصنوعی، پادکست‌های دوزبانه، آزمون جامع استادی و گواهی تسلط.",
   applicationName: "ZabanYar",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "ZabanYar",
+  },
+  icons: {
+    icon: [{ url: "/logo.jpg", type: "image/jpeg" }],
+    apple: [{ url: "/logo.jpg" }],
+  },
+  openGraph: {
+    title: "ZabanYar — تمرین زبان با هوش مصنوعی",
+    description:
+      "مکالمه صوتی با AI، پادکست دوزبانه، آزمون استادی و گواهی CEFR — از الفبا تا تسلط کامل.",
+    siteName: "ZabanYar",
+    type: "website",
+    images: [{ url: "/logo.jpg", width: 1200, height: 630, alt: "ZabanYar" }],
   },
   formatDetection: {
     telephone: false,

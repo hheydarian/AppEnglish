@@ -445,7 +445,7 @@ export function ExamView() {
                 <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 text-2xl shadow-lg">🎓</div>
                 <div>
                   <p className="text-sm font-bold">The Chief Examiner</p>
-                  <p className="text-xs text-muted-foreground">ممتحن ارشد آزمون استادی SpeakUp</p>
+                  <p className="text-xs text-muted-foreground">ممتحن ارشد آزمون استادی ZabanYar</p>
                 </div>
               </GlassCard>
               {MASTERY_EXAM.oral.map((o, i) => (
@@ -490,7 +490,7 @@ export function ExamView() {
           )}
 
           {/* ================= REPORT + CERTIFICATE ================= */}
-          {phase === "report" && <Report name={name || "زبان‌آموز SpeakUp"} scores={scores} certId={certId} seconds={seconds} />}
+          {phase === "report" && <Report name={name || "زبان‌آموز ZabanYar"} scores={scores} certId={certId} seconds={seconds} />}
         </AnimatePresence>
       </div>
     </div>
@@ -575,12 +575,12 @@ function Report({
   const cefr = cefrFromScore(scores.total);
   const [copied, setCopied] = useState(false);
 
-  const shareText = `🏆 SpeakUp Grand Mastery Exam\n${name} — ${cefr.level} (${cefr.label})\nنمره کل: ${toPersianDigits(scores.total)}٪\nشنیداری ${toPersianDigits(scores.listening)}٪ · گرامر ${toPersianDigits(scores.useOfEnglish)}٪ · جمله‌سازی ${toPersianDigits(scores.syntax)}٪ · شفاهی ${toPersianDigits(scores.oral)}٪\nشناسه گواهی: ${certId}`;
+  const shareText = `🏆 ZabanYar Grand Mastery Exam\n${name} — ${cefr.level} (${cefr.label})\nنمره کل: ${toPersianDigits(scores.total)}٪\nشنیداری ${toPersianDigits(scores.listening)}٪ · گرامر ${toPersianDigits(scores.useOfEnglish)}٪ · جمله‌سازی ${toPersianDigits(scores.syntax)}٪ · شفاهی ${toPersianDigits(scores.oral)}٪\nشناسه گواهی: ${certId}`;
 
   const share = async () => {
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
-        await navigator.share({ title: "گواهی تسلط SpeakUp", text: shareText });
+        await navigator.share({ title: "گواهی تسلط ZabanYar", text: shareText });
         return;
       } catch {
         /* cancelled */
@@ -656,7 +656,7 @@ function Report({
 
         <div className="relative flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1 text-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-500">SpeakUp Academy</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-500">ZabanYar Academy</p>
             <h3 className="mt-1 text-xl font-extrabold">گواهی تسلط زبان انگلیسی</h3>
             <p className="mt-1 text-[10px] text-muted-foreground">Grand Mastery Certification</p>
             <div className="mx-auto mt-4 h-px w-24 bg-amber-400/50" />
@@ -691,7 +691,7 @@ function Report({
         <div className="relative mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-amber-400/20 pt-4 text-[10px] text-muted-foreground">
           <span>شناسه: <span dir="ltr" className="font-mono">{certId}</span></span>
           <span>تاریخ: {today}</span>
-          <span>امضای دیجیتال: SpeakUp Exam Authority ✍️</span>
+          <span>امضای دیجیتال: ZabanYar Exam Authority ✍️</span>
         </div>
 
         {/* Share */}

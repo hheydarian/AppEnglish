@@ -135,6 +135,16 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
+  body {
+    /* Android WebView smooth scrolling: momentum + no bounce-through */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+  * {
+    /* Kill the grey tap flash on Android WebView taps */
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     @apply bg-background text-foreground;
     /* Mobile-first: prevent iOS text size adjust + smooth scrolling */
@@ -189,6 +199,22 @@
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
+  }
+
+  /*
+   * GPU promotion for animated / long list surfaces on Android WebView.
+   * Promoting to its own layer stops jank from paint invalidation cascades.
+   */
+  .gpu-layer {
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+  /* Apply specifically to long vocabulary/scenario lists. */
+  .list-animated {
+    contain: layout paint style;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 120px;
   }
 }
 

@@ -1,7 +1,7 @@
 import type { MasteryExam } from "@/types";
 
 /**
- * The Grand Mastery Exam — SpeakUp's final certification.
+ * The Grand Mastery Exam — ZabanYar's final certification.
  *
  * Modeled on IELTS/TOEFL task types across four skills:
  *   1. Listening (TTS narration, 2× US + 2× UK accents)

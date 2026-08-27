@@ -51,7 +51,9 @@ export function LessonCard({ lesson, accent, index = 0 }: LessonCardProps) {
       aria-disabled={lesson.locked}
       tabIndex={lesson.locked ? -1 : 0}
       className={cn(
-        "h-full p-5 ring-1 ring-transparent transition-all",
+        // gpu-layer: Android WebView keeps each card on its own compositor
+        // layer → hover/entrance animations stay 60fps in long lists.
+        "gpu-layer h-full p-5 ring-1 ring-transparent transition-all",
         !lesson.locked && "cursor-pointer",
         a.ring
       )}

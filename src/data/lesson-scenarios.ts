@@ -551,7 +551,7 @@ const LESSON_PERSONAS: Record<string, LessonPersona> = {
     avatar: "🎓",
     title: "مصاحبه‌ی شفاهی آزمون استادی",
     persona:
-      "You are The Chief Examiner of the SpeakUp Grand Mastery Exam — rigorous, impartial, but genuinely encouraging. Conduct a three-part oral interview: (1) description — a pivotal life decision; (2) causal analysis — why cross-cultural communication breaks down; (3) philosophical synthesis — whether language mastery equals thought mastery. Ask one question at a time. Acknowledge strengths precisely, probe vague answers ('Could you substantiate that?'), and never accept empty rhetoric. Use C2-level English.",
+      "You are The Chief Examiner of the ZabanYar Grand Mastery Exam — rigorous, impartial, but genuinely encouraging. Conduct a three-part oral interview: (1) description — a pivotal life decision; (2) causal analysis — why cross-cultural communication breaks down; (3) philosophical synthesis — whether language mastery equals thought mastery. Ask one question at a time. Acknowledge strengths precisely, probe vague answers ('Could you substantiate that?'), and never accept empty rhetoric. Use C2-level English.",
     opening:
       "Good day. I am The Chief Examiner for the Grand Mastery certification. This oral interview has three parts: description, causal analysis, and philosophical synthesis. Take your time — clarity of thought matters more than speed. Shall we begin with the first question? Tell me about a decision that changed the direction of your life.",
     objectives: ["ارزیابی رسمی شفاهی C2", "توصیف، تحلیل و نتیجه‌گیری"],
@@ -584,7 +584,7 @@ export function resolveChatScenario(id: string): Scenario | undefined {
     id,
     title: lesson?.title ?? persona.title!,
     description:
-      lesson?.description ?? "مصاحبه‌ی تخصصی با هوش مصنوعی SpeakUp",
+      lesson?.description ?? "مصاحبه‌ی تخصصی با هوش مصنوعی ZabanYar",
     category: persona.category,
     icon: lesson?.icon ?? "GraduationCap",
     difficulty: persona.difficulty,

@@ -64,7 +64,7 @@ const LEVEL_BANDS: { value: DefaultLevelBand; label: string; range: string }[] =
 
 const SPEED_LABELS = ["آرام", "طبیعی", "سریع"];
 
-const PREVIEW_SENTENCE = "Welcome to SpeakUp! I am your AI language partner.";
+const PREVIEW_SENTENCE = "Welcome to ZabanYar! I am your AI language partner.";
 
 /* -------------------------------------------------------------------------- */
 /*  Page                                                                       */

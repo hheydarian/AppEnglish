@@ -38,7 +38,7 @@
 # ---------------- Aggressive obfuscation for our code --------------
 
 # MainActivity is referenced from AndroidManifest by name — keep it.
--keep class com.speakup.app.MainActivity { *; }
+-keep class com.zabanyar.app.MainActivity { *; }
 
 # Strip every Log call at build time (MASVS-CODE: no sensitive logging).
 -assumenosideeffects class android.util.Log {

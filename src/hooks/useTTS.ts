@@ -2,35 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
+import {
+  speakRobust,
+  stopSpeak,
+  warmUpVoices,
+} from "@/lib/ttsEngine";
+import { prepareForSpeech } from "./ttsPrepare";
+import { pickVoiceByGender } from "./ttsVoice";
+
 /* -------------------------------------------------------------------------- */
 /*  Speech preparation — make letters & short tokens pronounce distinctly     */
 /* -------------------------------------------------------------------------- */
-
-/**
- * Normalize text before sending it to the speech synthesizer so that:
- *  - Paired letter forms like "A a", "Bb", "B b" are spoken as two separate
- *    letters with a natural pause ("A ... a") instead of gluing into a slur.
- *  - Single capital letters (used alone as alphabet lessons) are spelled out.
- *  - Short token runs (e.g. "A E I O U") get commas between them.
- *
- * This is essential for A0 alphabet lessons, where "A a" otherwise sounds
- * like a single nonsense syllable.
- */
-export function prepareForSpeech(text: string): string {
-  let out = text.trim();
-  if (!out) return out;
-
-  // 1) "A a" / "A  a" (big-space-small) → "A, a"  — most common A0 pattern.
-  out = out.replace(/([A-Z])\s+([a-z])/g, "$1, $2");
-  // 2) "Bb" / "Cc" (big immediately followed by small) → "B, b".
-  out = out.replace(/([A-Z])([a-z])(?![a-z])/g, "$1, $2");
-  // 3) Sequences of single capital letters like "A E I O U" → "A, E, I, O, U".
-  out = out.replace(/([A-Z])(\s+)(?=[A-Z](?:\s|$))/g, "$1,$2");
-  // 4) Collapse double commas/whitespace created by the steps above.
-  out = out.replace(/,\s*,/g, ",").replace(/\s+/g, " ").trim();
-
-  return out;
-}
 
 export interface UseTTSOptions {
   /** BCP-47 language tag, e.g. "en-US". */
@@ -61,11 +43,14 @@ function getSpeechSynthesisSupported() {
 }
 
 /**
- * Wrapper around the Web Speech API SpeechSynthesis (text-to-speech).
- * Used to read the AI character's replies aloud for listening practice.
+ * Hook facade over the layered RobustTTS engine (lib/ttsEngine.ts).
+ * The engine handles Android WebView quirks: async voice lists, silent
+ * failures, long-utterance cutoffs — and falls back to the native
+ * Capacitor TTS plugin when web speech proves unreliable.
  */
 export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
   const { lang = "en-US", rate = 1, pitch = 1, voiceGender } = options;
+
   const [isSpeaking, setIsSpeaking] = useState(false);
   const isSupported = useSyncExternalStore(
     emptySubscribe,
@@ -73,7 +58,8 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
     () => false // server snapshot (SSR)
   );
 
-  // Resolve a system voice matching the requested gender + lang.
+  // Resolve a system voice matching the requested gender + lang so the
+  // engine's cache is primed even before first playback.
   const resolvedVoice = useMemo(
     () => (voiceGender ? pickVoiceByGender(lang, voiceGender) : undefined),
     [lang, voiceGender]
@@ -81,84 +67,42 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
 
   useEffect(() => {
     if (!isSupported) return;
-    // Some browsers keep synthesis paused; ensure it's ready.
-    window.speechSynthesis.cancel();
+    warmUpVoices(lang);
+    void resolvedVoice; // pre-resolved → cached inside engine on next speak
     return () => {
-      window.speechSynthesis.cancel();
+      stopSpeak();
     };
-  }, [isSupported]);
+  }, [isSupported, lang, resolvedVoice]);
 
   const speak = useCallback(
     (text: string) => {
-      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
       if (!text.trim()) return;
+      if (
+        typeof window === "undefined" ||
+        !("speechSynthesis" in window)
+      ) {
+        // Even without Web Speech, the native layer may still work.
+        void speakRobust({ text, lang, rate, pitch });
+        return;
+      }
 
-      // Prepare text so alphabet letters & short tokens are spoken distinctly.
-      const prepared = prepareForSpeech(text);
+      setIsSpeaking(true);
 
-      const synth = window.speechSynthesis;
-      synth.cancel(); // interrupt anything currently playing
-
-      const utterance = new SpeechSynthesisUtterance(prepared);
-      utterance.lang = lang;
-      utterance.rate = rate;
-      utterance.pitch = pitch;
-      // Use the gender-matched voice when available.
-      if (resolvedVoice) utterance.voice = resolvedVoice;
-
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-
-      synth.speak(utterance);
+      void speakRobust({
+        text: prepareForSpeech(text),
+        lang,
+        rate,
+        pitch,
+        onEnd: () => setIsSpeaking(false),
+      });
     },
-    [lang, rate, pitch, resolvedVoice]
+    [lang, rate, pitch]
   );
 
   const cancel = useCallback(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
+    stopSpeak();
     setIsSpeaking(false);
   }, []);
 
   return { isSpeaking, isSupported, speak, cancel };
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Voice picker — match a system voice by gender + lang                     */
-/* -------------------------------------------------------------------------- */
-
-/** Heuristic name hints used to identify female vs male system voices. */
-const FEMALE_HINTS = [
-  "female", "samantha", "victoria", "zira", "karen", "moira", "tessa",
-  "serena", "fiona", "susan", "google us english", "google uk english female",
-  "aria", "jenny", "michelle",
-];
-const MALE_HINTS = [
-  "male", "daniel", "alex", "arthur", "oliver", "rishi", "fred", "tom",
-  "david", "george", "mark", "google uk english male",
-];
-
-/**
- * Find a SpeechSynthesisVoice matching the requested gender and language.
- * Falls back to the first voice for the language if no gender match is found.
- */
-function pickVoiceByGender(
-  lang: string,
-  gender: "female" | "male"
-): SpeechSynthesisVoice | null {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length === 0) return null;
-
-  // Filter by language prefix (e.g. "en" from "en-US").
-  const langPrefix = lang.slice(0, 2).toLowerCase();
-  const langVoices = voices.filter((v) => v.lang.toLowerCase().startsWith(langPrefix));
-  const pool = langVoices.length > 0 ? langVoices : voices;
-
-  const hints = gender === "female" ? FEMALE_HINTS : MALE_HINTS;
-  const match = pool.find((v) =>
-    hints.some((h) => v.name.toLowerCase().includes(h))
-  );
-  return match ?? pool[0] ?? null;
 }

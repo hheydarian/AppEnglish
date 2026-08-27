@@ -2,7 +2,7 @@ import { ExamView } from "./ExamView";
 
 export const metadata = {
   title: "آزمون نهایی استادی",
-  description: "آزمون جامع تعیین سطح و گواهی تسلط SpeakUp",
+  description: "آزمون جامع تعیین سطح و گواهی تسلط ZabanYar",
 };
 
 /**

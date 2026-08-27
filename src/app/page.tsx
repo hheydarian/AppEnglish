@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { Sparkles, Flame, Trophy, ArrowLeft, BookOpen, Headphones } from "lucide-react";
+import { Flame, Trophy, ArrowLeft, BookOpen, Headphones } from "lucide-react";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/layout";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -54,9 +55,16 @@ export default function Home() {
             <motion.div
               animate={{ rotate: [0, 8, -8, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-cyan-500 text-white shadow-xl shadow-brand/30 sm:size-14"
+              className="size-14 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-cyan-500 shadow-xl shadow-brand/30 sm:size-16"
             >
-              <Sparkles className="size-6 sm:size-7" />
+              <Image
+                src="/logo.jpg"
+                alt="ZabanYar"
+                width={64}
+                height={64}
+                priority
+                className="size-full object-cover"
+              />
             </motion.div>
             <div className="min-w-0 flex-1">
               <p className="text-sm text-muted-foreground">سلام رفیق! 👋</p>

@@ -1,6 +1,6 @@
 {
-	"appId": "com.speakup.app",
-	"appName": "SpeakUp",
+	"appId": "com.ZabanYar.app",
+	"appName": "ZabanYar",
 	"webDir": "out",
 	"android": {
 		"allowMixedContent": false,

@@ -8,7 +8,7 @@ import { C1_LESSON_CONTENT } from "./c1-content";
 import { C2_LESSON_CONTENT } from "./c2-content";
 
 /**
- * The SpeakUp Learning Tree — a complete path from absolute zero (A0) to
+ * The ZabanYar Learning Tree — a complete path from absolute zero (A0) to
  * mastery (C2). A0 is built out in full (4 units × 3 lessons, each with a
  * 4-step interactive flow). Higher levels reuse the simpler flat structure
  * until they get the same treatment.
