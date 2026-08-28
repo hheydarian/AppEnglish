@@ -4,18 +4,17 @@ import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { MotionConfig } from "framer-motion";
 import { useSettingsStore } from "@/store/settingsStore";
-import { stopSpeak } from "@/lib/ttsEngine";
+import { stopSpeak, isNativePlatform } from "@/lib/ttsEngine";
 
 /**
  * Global client providers — mounted once in the root layout.
  *
  * - MotionConfig: "Reduce Motion" setting disables all Framer animations.
  * - data-glass / data-reduce-motion attributes on <html> drive CSS overrides.
- * - ANDROID HARDWARE BACK BUTTON: without this listener the OS default kills
- *   the app from any screen. We intercept it and route like a normal browser:
- *     • chat/lesson/exam/podcast → history.back() (step-by-step flow)
- *     • any other non-root page  → router.back()
- *     • root "/"                 → double-tap within 2s to exit (native toast)
+ * - ANDROID HARDWARE BACK BUTTON: intercepted only when running on a native
+ *   platform (Capacitor.isNativePlatform() === true), never on plain web.
+ *   Every plugin call is inside try/catch — a plugin failure must never
+ *   white-screen the app.
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   const glassStyle = useSettingsStore((s) => s.glassStyle);
@@ -31,22 +30,31 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   /* ---------- Android hardware back button ---------- */
   useEffect(() => {
-    // Only meaningful inside the native shell — web browsers handle back natively.
-    if (!(window as unknown as { Capacitor?: unknown }).Capacitor) return;
-
     let cancelled = false;
     let lastBack = 0;
+    let cleanupFn: (() => void) | null = null;
 
+    // GUARD 1: native platform only. On plain web this resolves false and the
+    // whole block (and the dynamic plugin import) is skipped entirely.
     void (async () => {
       try {
+        const native = await isNativePlatform();
+        if (cancelled || !native) return;
+
+        // GUARD 2: dynamic import inside try/catch — a missing/broken plugin
+        // module can never crash the render tree.
         const { App: CapApp } = await import("@capacitor/app");
         if (cancelled) return;
 
-        await CapApp.addListener("backButton", () => {
-          // Stop any narration first — a back press means "leave this context".
-          stopSpeak();
+        const listener = await CapApp.addListener("backButton", () => {
+          // Stop narration — a back press means "leave this context".
+          try {
+            stopSpeak();
+          } catch {
+            /* never let TTS teardown crash navigation */
+          }
 
-          // Deep flows always step backwards through their own screens.
+          // Deep flows step backwards through their own screens.
           if (
             pathname.startsWith("/chat") ||
             pathname.startsWith("/lesson") ||
@@ -62,7 +70,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
             return;
           }
 
-          // Already home: double-tap within 2s exits (standard Android UX).
+          // Home: double-tap within 2s exits (standard Android UX).
           const now = Date.now();
           if (now - lastBack < 2000) {
             void CapApp.exitApp();
@@ -71,13 +79,21 @@ export function AppProviders({ children }: { children: ReactNode }) {
             navigator.vibrate?.(30);
           }
         });
-      } catch {
-        // Plugin unavailable (pure web build) — browser handles back natively.
+
+        cleanupFn = () => listener.remove();
+      } catch (err) {
+        // Plugin unavailable / bridge not ready — browser handles back natively.
+        console.warn("[AppProviders] backButton listener unavailable:", err);
       }
     })();
 
     return () => {
       cancelled = true;
+      try {
+        cleanupFn?.();
+      } catch {
+        /* ignore */
+      }
     };
   }, [pathname, router]);
 

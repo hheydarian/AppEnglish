@@ -37,8 +37,26 @@
 
 # ---------------- Aggressive obfuscation for our code --------------
 
+# Our entire package is kept — the native side is only the bridge shell, and
+# Capacitor resolves plugin wiring reflectively. Stripping here risks a
+# startup crash far more than obfuscation gains anything.
+-keep class com.zabanyar.app.** { *; }
+
 # MainActivity is referenced from AndroidManifest by name — keep it.
 -keep class com.zabanyar.app.MainActivity { *; }
+
+# ---------------- Capacitor Community / official plugins ----------------
+# Both plugins resolve their @PluginMethod methods reflectively through the
+# bridge — obfuscation silently breaks every call (TTS silence, dead back
+# button). Keep them whole.
+-keep class com.capacitorcommunity.texttospeech.** { *; }
+-keep class com.getcapacitor.community.tts.** { *; }
+-dontwarn com.capacitorcommunity.texttospeech.**
+-dontwarn com.getcapacitor.community.tts.**
+
+-keep class com.capacitorjs.plugins.app.** { *; }
+-keep class com.capacitorjs.plugins.** { *; }
+-dontwarn com.capacitorjs.plugins.app.**
 
 # Strip every Log call at build time (MASVS-CODE: no sensitive logging).
 -assumenosideeffects class android.util.Log {

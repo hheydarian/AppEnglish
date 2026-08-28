@@ -47,16 +47,26 @@ type NativeTts = {
 let nativeTts: NativeTts | null = null;
 let nativeLoadAttempted = false;
 
-function isCapacitor(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    !!(window as unknown as { Capacitor?: unknown }).Capacitor
-  );
+/**
+ * True ONLY when running inside a native Capacitor shell (Android/iOS).
+ * Merely seeing `window.Capacitor` is not enough — the bridge may not be
+ * ready yet, and on plain web some bundlers leak the global. The official
+ * `isNativePlatform()` API is the authoritative check.
+ */
+export async function isNativePlatform(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  try {
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
+      .Capacitor;
+    return typeof cap?.isNativePlatform === "function" && cap.isNativePlatform();
+  } catch {
+    return false;
+  }
 }
 
-/** Lazily load the native plugin ONLY inside Capacitor. */
+/** Lazily load the native plugin ONLY on a verified native platform. */
 async function loadNative(): Promise<NativeTts | null> {
-  if (!isCapacitor()) return null;
+  if (!(await isNativePlatform())) return null;
   if (nativeTts) return nativeTts;
   if (nativeLoadAttempted) return null;
   nativeLoadAttempted = true;
@@ -206,25 +216,29 @@ export async function speakRobust(opts: SpeakOptions): Promise<"web" | "native" 
     settings.accent === "au" || // AU system voices rarely exist in WebView → native handles it better
     webTTSBroken === true;
 
-  /* ---------- Layer 2 first: native plugin (only in Capacitor) ---------- */
-  if (isCapacitor() && (preferNative || !voicesReady)) {
-    const nat = await loadNative();
-    if (nat) {
-      try {
-        await nat.stop();
-        await nat.speak({
-          text,
-          lang,
-          rate: Math.min(2, Math.max(0.5, rate)),
-          pitch,
-          volume: 1.0,
-        });
-        opts.onStart?.();
-        opts.onEnd?.(); // plugin resolves on completion
-        return "native";
-      } catch {
-        // fall through to web attempt
+  /* ---------- Layer 2 first: native plugin (only on native platform) ---- */
+  if ((await isNativePlatform()) && (preferNative || !voicesReady)) {
+    try {
+      const nat = await loadNative();
+      if (nat) {
+        try {
+          await nat.stop();
+          await nat.speak({
+            text,
+            lang,
+            rate: Math.min(2, Math.max(0.5, rate)),
+            pitch,
+            volume: 1.0,
+          });
+          opts.onStart?.();
+          opts.onEnd?.(); // plugin resolves on completion
+          return "native";
+        } catch {
+          // fall through to web attempt
+        }
       }
+    } catch {
+      // plugin module failed to load — continue to web layer
     }
   }
 
