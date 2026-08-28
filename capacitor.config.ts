@@ -18,7 +18,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  *   3. npx cap open android   # Android Studio → Build > Build APK(s)
  */
 const config: CapacitorConfig = {
-  appId: "com.ZabanYar.app",
+  appId: "com.zabanyar.app",
   appName: "ZabanYar",
   webDir: "out",
   android: {
