@@ -38,4 +38,17 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        TTS engine visibility (Android 11+ package visibility).
+        REQUIRED so the app can bind to the device's Google TTS service —
+        without this <queries> entry, TextToSpeech.speak() resolves no engine
+        and the app stays completely silent in release builds.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
 </manifest>

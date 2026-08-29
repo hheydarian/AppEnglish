@@ -3,35 +3,25 @@
 import { useSettingsStore } from "@/store/settingsStore";
 
 /**
- * RobustTTS — a WebView-survivable text-to-speech service.
+ * RobustTTS — native-first text-to-speech for ZabanYar.
  *
- * WHY THIS EXISTS
- * ===============
- * `window.speechSynthesis` inside the Android WebView is notoriously broken:
- *   - getVoices() returns [] until the engine warms up (async, sometimes never).
- *   - .speak() silently no-ops if called with an unknown `voice`.
- *   - Long utterances get cut off after ~4s on some OEM WebView builds unless
- *     a keep-alive resume loop runs.
+ * ARCHITECTURE (final, per Android WebView reality):
  *
- * STRATEGY (layered fallback):
- *   Layer 1 (Web): warmed-up SpeechSynthesis with voice resolution,
- *                  chunked long text + keep-alive resume timer.
- *   Layer 2 (Native): @capacitor-community/text-to-speech plugin when running
- *                  inside Capacitor AND web layer reports failure.
+ *   ANDROID (Capacitor.isNativePlatform() === true):
+ *     → EXCLUSIVELY uses the native Android TTS engine via
+ *       @capacitor-community/text-to-speech. Web SpeechSynthesis is NEVER
+ *       attempted — it is silent/broken in most Android WebViews.
  *
- * Every hook consumer just calls speak()/cancel() — the layers are invisible.
+ *   WEB / DESKTOP BROWSER:
+ *     → Hardened Web SpeechSynthesis (warmed voices, chunking, keep-alive).
+ *
+ * Every consumer (chat, podcasts, lessons, exam, settings preview) calls
+ * speakRobust()/stopSpeak() — the layers are fully transparent.
  */
 
 /* -------------------------------------------------------------------------- */
-/*  Engine state                                                               */
+/*  Native layer                                                              */
 /* -------------------------------------------------------------------------- */
-
-let voices: SpeechSynthesisVoice[] = [];
-let voicesReady = false;
-let warming = false;
-
-/** true once we've proven (or assumed after timeout) that Web TTS is dead. */
-let webTTSBroken: boolean | null = null; // null = unknown
 
 type NativeTts = {
   speak: (o: {
@@ -40,6 +30,7 @@ type NativeTts = {
     rate?: number;
     pitch?: number;
     volume?: number;
+    category?: string;
   }) => Promise<void>;
   stop: () => Promise<void>;
 };
@@ -47,17 +38,15 @@ type NativeTts = {
 let nativeTts: NativeTts | null = null;
 let nativeLoadAttempted = false;
 
-/**
- * True ONLY when running inside a native Capacitor shell (Android/iOS).
- * Merely seeing `window.Capacitor` is not enough — the bridge may not be
- * ready yet, and on plain web some bundlers leak the global. The official
- * `isNativePlatform()` API is the authoritative check.
- */
+/** Official Capacitor check — authoritative on both web and native. */
 export async function isNativePlatform(): Promise<boolean> {
   if (typeof window === "undefined") return false;
   try {
-    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
-      .Capacitor;
+    const cap = (
+      window as unknown as {
+        Capacitor?: { isNativePlatform?: () => boolean };
+      }
+    ).Capacitor;
     return typeof cap?.isNativePlatform === "function" && cap.isNativePlatform();
   } catch {
     return false;
@@ -75,14 +64,23 @@ async function loadNative(): Promise<NativeTts | null> {
     const mod = await import("@capacitor-community/text-to-speech");
     nativeTts = mod.TextToSpeech as unknown as NativeTts;
     return nativeTts;
-  } catch {
+  } catch (err) {
+    console.warn("[ttsEngine] native TTS plugin unavailable:", err);
     return null;
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Web layer state                                                           */
+/* -------------------------------------------------------------------------- */
+
+let webVoices: SpeechSynthesisVoice[] = [];
+let webVoicesReady = false;
+let webWarming = false;
+
 /**
- * Warm the Web voices list. Android WebView populates voices async — poll
- * briefly and also hook onvoiceschanged so late arrivals register.
+ * Warm the Web voices list (desktop browsers only path).
+ * Android WebView never reaches this — native layer short-circuits first.
  */
 export function warmUpVoices(langPrefix = "en"): void {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -91,8 +89,8 @@ export function warmUpVoices(langPrefix = "en"): void {
   const grab = () => {
     const list = synth.getVoices();
     if (list.length > 0) {
-      voices = list;
-      voicesReady = true;
+      webVoices = list;
+      webVoicesReady = true;
       return true;
     }
     return false;
@@ -100,35 +98,30 @@ export function warmUpVoices(langPrefix = "en"): void {
 
   if (grab()) return;
 
-  if (!warming) {
-    warming = true;
-    // Standard event.
+  if (!webWarming) {
+    webWarming = true;
     synth.addEventListener?.("voiceschanged", () => grab(), { once: true });
-    // Aggressive polling — some WebViews fire nothing.
     let tries = 0;
     const poll = setInterval(() => {
       tries += 1;
       if (grab() || tries > 40) {
         clearInterval(poll);
-        warming = false;
+        webWarming = false;
       }
     }, 250);
   }
-  void langPrefix; // reserved for per-lang warmup filtering
+  void langPrefix;
 }
 
-/** Pick the best system voice for lang + gender using our warmed cache. */
 function pickVoice(lang: string, gender: "female" | "male") {
-  if (!voicesReady && typeof window !== "undefined" && "speechSynthesis" in window) {
-    voices = window.speechSynthesis.getVoices();
-    voicesReady = voices.length > 0;
+  if (!webVoicesReady && typeof window !== "undefined" && "speechSynthesis" in window) {
+    webVoices = window.speechSynthesis.getVoices();
+    webVoicesReady = webVoices.length > 0;
   }
 
   const prefix = lang.slice(0, 2).toLowerCase();
-  const pool =
-    voices.filter((v) => v.lang.toLowerCase().startsWith(prefix)).length > 0
-      ? voices.filter((v) => v.lang.toLowerCase().startsWith(prefix))
-      : voices;
+  const langPool = webVoices.filter((v) => v.lang.toLowerCase().startsWith(prefix));
+  const pool = langPool.length > 0 ? langPool : webVoices;
 
   const hints =
     gender === "female"
@@ -142,10 +135,7 @@ function pickVoice(lang: string, gender: "female" | "male") {
   );
 }
 
-/**
- * Android WebView cuts long utterances — split on sentence boundaries so each
- * chunk stays under ~180 chars and plays back to back.
- */
+/** Split long text — desktop browsers also clip very long utterances. */
 function chunkText(text: string): string[] {
   if (text.length <= 180) return [text];
   const sentences = text.split(/(?<=[.!?])\s+/);
@@ -164,22 +154,10 @@ function chunkText(text: string): string[] {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Public imperative API                                                      */
+/*  Public controls                                                           */
 /* -------------------------------------------------------------------------- */
 
-export interface SpeakOptions {
-  text: string;
-  lang?: string;
-  rate?: number;
-  pitch?: number;
-  /** Called when playback fully finishes (or fails over successfully). */
-  onEnd?: () => void;
-  /** Called immediately when playback audibly starts. */
-  onStart?: () => void;
-}
-
 let activeWatchdog: ReturnType<typeof setInterval> | null = null;
-let endTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function stopSpeak(): void {
   if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -193,59 +171,75 @@ export function stopSpeak(): void {
     clearInterval(activeWatchdog);
     activeWatchdog = null;
   }
-  if (endTimer) {
-    clearTimeout(endTimer);
-    endTimer = null;
-  }
-  void nativeTts?.stop();
+  // Native stop — wrapped so a broken plugin never throws here.
+  void (async () => {
+    try {
+      const nat = await loadNative();
+      await nat?.stop();
+    } catch {
+      /* ignore */
+    }
+  })();
+}
+
+export interface SpeakOptions {
+  text: string;
+  lang?: string;
+  rate?: number;
+  pitch?: number;
+  onEnd?: () => void;
+  onStart?: () => void;
 }
 
 /**
- * Speak with layered fallback. Returns "web" | "native" | "failed".
+ * Speak text with the correct engine for the current platform.
+ *   Native Android → @capacitor-community/text-to-speech (ALWAYS first).
+ *   Web browser    → hardened SpeechSynthesis.
  */
-export async function speakRobust(opts: SpeakOptions): Promise<"web" | "native" | "failed"> {
+export async function speakRobust(
+  opts: SpeakOptions
+): Promise<"native" | "web" | "failed"> {
   const { text, lang = "en-US", rate = 1, pitch = 1 } = opts;
   if (!text.trim()) return "failed";
 
   const settings = useSettingsStore.getState();
 
-  // Always warm before speaking — fixes first-tap silence on Android.
-  warmUpVoices(lang);
-
-  const preferNative =
-    settings.accent === "au" || // AU system voices rarely exist in WebView → native handles it better
-    webTTSBroken === true;
-
-  /* ---------- Layer 2 first: native plugin (only on native platform) ---- */
-  if ((await isNativePlatform()) && (preferNative || !voicesReady)) {
-    try {
-      const nat = await loadNative();
-      if (nat) {
-        try {
-          await nat.stop();
-          await nat.speak({
-            text,
-            lang,
-            rate: Math.min(2, Math.max(0.5, rate)),
-            pitch,
-            volume: 1.0,
-          });
-          opts.onStart?.();
-          opts.onEnd?.(); // plugin resolves on completion
-          return "native";
-        } catch {
-          // fall through to web attempt
-        }
+  /* ================= LAYER 1 — NATIVE (Android) =================
+   * On native, web speechSynthesis is silent. The native Android TTS
+   * engine (Google TTS) is the ONLY reliable path — so we use it
+   * exclusively and never fall through to the broken web layer.      */
+  if (await isNativePlatform()) {
+    const nat = await loadNative();
+    if (nat) {
+      try {
+        await nat.stop();
+        await nat.speak({
+          text,
+          lang,
+          rate: Math.min(2, Math.max(0.5, rate)),
+          pitch,
+          volume: 1.0,
+          category: "ambient", // mixes properly, respects media volume
+        });
+        opts.onStart?.();
+        opts.onEnd?.(); // plugin promise resolves on completion
+        return "native";
+      } catch (err) {
+        console.warn("[ttsEngine] native speak failed, trying web:", err);
+        // Even on failure we do NOT use web speech on Android — it is silent.
+        return "failed";
       }
-    } catch {
-      // plugin module failed to load — continue to web layer
     }
+    // Plugin module missing on native — nothing else can produce sound here.
+    return "failed";
   }
 
-  /* ---------- Layer 1: hardened Web Speech ---------- */
+  /* ================= LAYER 2 — WEB (desktop/browser) ============= */
   if (typeof window === "undefined" || !("speechSynthesis" in window)) {
     return "failed";
   }
+
+  warmUpVoices(lang);
   const synth = window.speechSynthesis;
   stopSpeak();
 
@@ -255,7 +249,7 @@ export async function speakRobust(opts: SpeakOptions): Promise<"web" | "native" 
 
   const speakChunk = (i: number) => {
     const utter = new SpeechSynthesisUtterance(chunks[i]);
-    utter.lang = lang; // REQUIRED — some engines ignore utterance without it
+    utter.lang = lang;
     utter.rate = rate;
     utter.pitch = pitch;
     utter.volume = 1.0;
@@ -264,10 +258,7 @@ export async function speakRobust(opts: SpeakOptions): Promise<"web" | "native" 
     utter.onstart = () => {
       if (!started) {
         started = true;
-        webTTSBroken = false;
         opts.onStart?.();
-
-        // Keep-alive: Chrome/WebView pauses synthesis when idle mid-utterance.
         if (activeWatchdog) clearInterval(activeWatchdog);
         activeWatchdog = setInterval(() => {
           if (synth.speaking && synth.paused) synth.resume();
@@ -284,31 +275,9 @@ export async function speakRobust(opts: SpeakOptions): Promise<"web" | "native" 
       }
     };
 
-    // Detect silent failure: no start within 1200ms of calling speak().
-    setTimeout(() => {
-      if (!started && i === 0) {
-        webTTSBroken = true;
-        // Escalate to native once, synchronously best-effort.
-        void (async () => {
-          const nat = await loadNative();
-          if (nat) {
-            try {
-              await nat.stop();
-              await nat.speak({ text, lang, rate, pitch, volume: 1.0 });
-              opts.onStart?.();
-              opts.onEnd?.();
-            } catch {
-              /* give up silently */
-            }
-          }
-        })();
-      }
-    }, 1200);
-
     synth.speak(utter);
   };
 
   speakChunk(0);
-  void endTimer;
   return "web";
 }
