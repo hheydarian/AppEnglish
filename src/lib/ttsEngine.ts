@@ -33,6 +33,10 @@ type NativeTts = {
     category?: string;
   }) => Promise<void>;
   stop: () => Promise<void>;
+  /** List languages the device TTS engine can actually speak. */
+  getSupportedLanguages: () => Promise<{ languages: string[] }>;
+  /** Open the system Text-to-Speech settings screen. */
+  openInstall: () => Promise<void>;
 };
 
 let nativeTts: NativeTts | null = null;
@@ -67,6 +71,71 @@ async function loadNative(): Promise<NativeTts | null> {
   } catch (err) {
     console.warn("[ttsEngine] native TTS plugin unavailable:", err);
     return null;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Self-healing: language availability + user guidance state                 */
+/* -------------------------------------------------------------------------- */
+
+export type TtsHealth = "checking" | "ready" | "engine-missing";
+
+type HealthListener = (health: TtsHealth) => void;
+const healthListeners = new Set<HealthListener>();
+let ttsHealth: TtsHealth = "checking";
+
+/**
+ * Current TTS health on native devices.
+ * "engine-missing" means English TTS is unavailable → UI should show the
+ * guidance modal directing the user to system Text-to-Speech settings.
+ */
+export function getTtsHealth(): TtsHealth {
+  return ttsHealth;
+}
+
+export function onTtsHealthChange(listener: HealthListener): () => void {
+  healthListeners.add(listener);
+  return () => healthListeners.delete(listener);
+}
+
+function setHealth(h: TtsHealth): void {
+  if (ttsHealth === h) return;
+  ttsHealth = h;
+  healthListeners.forEach((fn) => fn(h));
+}
+
+/**
+ * Verify the device's TTS engine actually supports the target language.
+ * Runs once per session on native; sets the shared health state.
+ */
+async function verifyLanguageSupport(nat: NativeTts, lang: string): Promise<boolean> {
+  try {
+    const { languages } = await nat.getSupportedLanguages();
+    const prefix = lang.slice(0, 2).toLowerCase();
+    const ok = languages.some(
+      (l) => l.toLowerCase().startsWith(prefix) || l.toLowerCase() === lang.toLowerCase()
+    );
+    setHealth(ok ? "ready" : "engine-missing");
+    return ok;
+  } catch {
+    // Engine query failed — assume broken and guide the user.
+    setHealth("engine-missing");
+    return false;
+  }
+}
+
+/**
+ * Open the system Text-to-Speech settings screen
+ * (com.android.settings.TTS_SETTINGS) so the user can install/enable the
+ * English voice data. Uses the plugin's built-in openInstall() which issues
+ * exactly that Intent.
+ */
+export async function openTtsSettings(): Promise<void> {
+  try {
+    const nat = await loadNative();
+    await nat?.openInstall();
+  } catch (err) {
+    console.warn("[ttsEngine] could not open TTS settings:", err);
   }
 }
 
@@ -210,6 +279,14 @@ export async function speakRobust(
    * exclusively and never fall through to the broken web layer.      */
   if (await isNativePlatform()) {
     const nat = await loadNative();
+
+    // SELF-HEALING: verify the engine actually supports the target language.
+    // If en-US is missing, surface the guidance modal instead of playing silence.
+    if (nat && ttsHealth !== "ready") {
+      const supported = await verifyLanguageSupport(nat, lang);
+      if (!supported) return "failed";
+    }
+
     if (nat) {
       try {
         await nat.stop();
@@ -221,16 +298,20 @@ export async function speakRobust(
           volume: 1.0,
           category: "ambient", // mixes properly, respects media volume
         });
+        setHealth("ready");
         opts.onStart?.();
         opts.onEnd?.(); // plugin promise resolves on completion
         return "native";
       } catch (err) {
-        console.warn("[ttsEngine] native speak failed, trying web:", err);
-        // Even on failure we do NOT use web speech on Android — it is silent.
+        // speak() itself errored → likely no engine/data. Guide the user.
+        console.warn("[ttsEngine] native speak failed:", err);
+        setHealth("engine-missing");
+        // We do NOT use web speech on Android — it is silent there.
         return "failed";
       }
     }
     // Plugin module missing on native — nothing else can produce sound here.
+    setHealth("engine-missing");
     return "failed";
   }
 

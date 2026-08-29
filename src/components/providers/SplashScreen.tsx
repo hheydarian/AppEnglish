@@ -28,9 +28,9 @@ export function SplashScreen({ children }: { children: ReactNode }) {
           <motion.div
             key="splash"
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            transition={{ duration: 0.6, ease: "easeInOut" }}
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden bg-background"
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className="gpu-layer fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden bg-background"
             aria-hidden
           >
             {/* Brand-colored light halos */}

@@ -6,6 +6,7 @@ import { MotionConfig } from "framer-motion";
 import { useSettingsStore } from "@/store/settingsStore";
 import { stopSpeak, isNativePlatform } from "@/lib/ttsEngine";
 import { SplashScreen } from "./SplashScreen";
+import { TtsGuideModal } from "./TtsGuideModal";
 
 /**
  * Global client providers — mounted once in the root layout.
@@ -101,6 +102,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <MotionConfig reducedMotion={reduceMotion ? "always" : "never"}>
       <SplashScreen>{children}</SplashScreen>
+      <TtsGuideModal />
     </MotionConfig>
   );
 }
