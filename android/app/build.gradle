@@ -18,20 +18,8 @@ android {
     }
     buildTypes {
         release {
-            // SECURITY (OWASP MASVS-RESILIENCE): R8 code shrinking + resource
-            // shrinking + full obfuscation. Strips logs, renames identifiers,
-            // and bloats reverse-engineering effort dramatically.
-            minifyEnabled true
-            shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // Harden against debuggers / memory dumps in release artifacts.
-            debuggable false
-            jniDebuggable false
-            renderscriptDebuggable false
-        }
-        debug {
-            // Debug builds stay debuggable by definition but never ship.
-            debuggable true
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 }

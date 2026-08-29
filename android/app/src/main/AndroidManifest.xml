@@ -1,34 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  SpeakUp — hardened manifest (OWASP MASVS-PLATFORM).
-
-  SECURITY NOTES:
-  - allowBackup="false" + dataExtractionRules: prevents `adb backup` and
-    cloud/device-to-device extraction of user progress on rooted devices.
-  - Only MainActivity is exported (launcher requirement). The FileProvider
-    stays unexported with grantUriPermissions for scoped sharing only.
-  - Least-privilege permissions: INTERNET only. Microphone (speech input)
-    is requested at runtime through the WebView permission flow, never as a
-    blanket install-time grant.
-  - usesCleartextTraffic="false": no http:// traffic may leave the app.
--->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
-        android:allowBackup="false"
-        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="false"
-        android:hardwareAccelerated="true"
         android:theme="@style/AppTheme">
 
-        <!--
-            THE ONLY exported component (launcher requirement).
-            hardwareAccelerated keeps WebGL (Three.js) smooth in the WebView.
-        -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
@@ -44,7 +24,6 @@
 
         </activity>
 
-        <!-- Scoped file sharing only — never exported. -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -56,7 +35,7 @@
         </provider>
     </application>
 
-    <!-- Least-privilege permissions. Nothing else is granted. -->
-    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Permissions -->
 
+    <uses-permission android:name="android.permission.INTERNET" />
 </manifest>
