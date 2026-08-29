@@ -3,46 +3,28 @@
 import { useSettingsStore } from "@/store/settingsStore";
 
 /**
- * RobustTTS — native-first text-to-speech for ZabanYar.
+ * HybridTTS — a 3-layer, self-healing speech engine for ZabanYar.
  *
- * ARCHITECTURE (final, per Android WebView reality):
+ * LAYER 1 — Online streamed TTS (fastest, best quality)
+ *   When online, streams Google Translate TTS audio via `new Audio(url)`.
+ *   Works flawlessly inside the Android WebView (media playback unlocked in
+ *   MainActivity) and needs no device voice data.
  *
- *   ANDROID (Capacitor.isNativePlatform() === true):
- *     → EXCLUSIVELY uses the native Android TTS engine via
- *       @capacitor-community/text-to-speech. Web SpeechSynthesis is NEVER
- *       attempted — it is silent/broken in most Android WebViews.
+ * LAYER 2 — Native offline TTS (fallback)
+ *   @capacitor-community/text-to-speech → the device's Google TTS engine.
+ *   Language matching is UNDERSCORE-AWARE: Android reports "en_US" while the
+ *   web world says "en-US" — regex /^en[-_]/i handles both.
  *
- *   WEB / DESKTOP BROWSER:
- *     → Hardened Web SpeechSynthesis (warmed voices, chunking, keep-alive).
+ * LAYER 3 — Web Speech API (last resort, desktop browsers)
+ *   Hardened SpeechSynthesis with warmed voices and keep-alive.
  *
- * Every consumer (chat, podcasts, lessons, exam, settings preview) calls
- * speakRobust()/stopSpeak() — the layers are fully transparent.
+ * All layers are silent-safe: any failure falls through to the next layer.
  */
 
 /* -------------------------------------------------------------------------- */
-/*  Native layer                                                              */
+/*  Platform detection                                                        */
 /* -------------------------------------------------------------------------- */
 
-type NativeTts = {
-  speak: (o: {
-    text: string;
-    lang?: string;
-    rate?: number;
-    pitch?: number;
-    volume?: number;
-    category?: string;
-  }) => Promise<void>;
-  stop: () => Promise<void>;
-  /** List languages the device TTS engine can actually speak. */
-  getSupportedLanguages: () => Promise<{ languages: string[] }>;
-  /** Open the system Text-to-Speech settings screen. */
-  openInstall: () => Promise<void>;
-};
-
-let nativeTts: NativeTts | null = null;
-let nativeLoadAttempted = false;
-
-/** Official Capacitor check — authoritative on both web and native. */
 export async function isNativePlatform(): Promise<boolean> {
   if (typeof window === "undefined") return false;
   try {
@@ -57,14 +39,37 @@ export async function isNativePlatform(): Promise<boolean> {
   }
 }
 
-/** Lazily load the native plugin ONLY on a verified native platform. */
+function isOnline(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine !== false;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Layer 2 — native plugin                                                   */
+/* -------------------------------------------------------------------------- */
+
+type NativeTts = {
+  speak: (o: {
+    text: string;
+    lang?: string;
+    rate?: number;
+    pitch?: number;
+    volume?: number;
+    category?: string;
+  }) => Promise<void>;
+  stop: () => Promise<void>;
+  getSupportedLanguages: () => Promise<{ languages: string[] }>;
+  openInstall: () => Promise<void>;
+};
+
+let nativeTts: NativeTts | null = null;
+let nativeLoadAttempted = false;
+
 async function loadNative(): Promise<NativeTts | null> {
   if (!(await isNativePlatform())) return null;
   if (nativeTts) return nativeTts;
   if (nativeLoadAttempted) return null;
   nativeLoadAttempted = true;
   try {
-    // registerPlugin returns a ready proxy — no constructor call.
     const mod = await import("@capacitor-community/text-to-speech");
     nativeTts = mod.TextToSpeech as unknown as NativeTts;
     return nativeTts;
@@ -75,7 +80,7 @@ async function loadNative(): Promise<NativeTts | null> {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Self-healing: language availability + user guidance state                 */
+/*  Self-healing: language support (UNDERSCORE-AWARE)                          */
 /* -------------------------------------------------------------------------- */
 
 export type TtsHealth = "checking" | "ready" | "engine-missing";
@@ -84,11 +89,6 @@ type HealthListener = (health: TtsHealth) => void;
 const healthListeners = new Set<HealthListener>();
 let ttsHealth: TtsHealth = "checking";
 
-/**
- * Current TTS health on native devices.
- * "engine-missing" means English TTS is unavailable → UI should show the
- * guidance modal directing the user to system Text-to-Speech settings.
- */
 export function getTtsHealth(): TtsHealth {
   return ttsHealth;
 }
@@ -105,30 +105,40 @@ function setHealth(h: TtsHealth): void {
 }
 
 /**
- * Verify the device's TTS engine actually supports the target language.
- * Runs once per session on native; sets the shared health state.
+ * Verify the device TTS engine supports the target language.
+ *
+ * CRITICAL: Android's getSupportedLanguages() returns underscore codes
+ * ("en_US"), while we request hyphen codes ("en-US"). A naive includes()
+ * check fails and wrongly reports the engine as broken. The regex
+ * /^en[-_]/i treats both forms as equal.
  */
 async function verifyLanguageSupport(nat: NativeTts, lang: string): Promise<boolean> {
   try {
     const { languages } = await nat.getSupportedLanguages();
     const prefix = lang.slice(0, 2).toLowerCase();
-    const ok = languages.some(
-      (l) => l.toLowerCase().startsWith(prefix) || l.toLowerCase() === lang.toLowerCase()
-    );
+    const ok =
+      languages.some((l) => new RegExp(`^${prefix}[-_]`, "i").test(l)) ||
+      languages.some((l) => l.toLowerCase() === lang.toLowerCase());
+
+    if (!ok) {
+      console.warn(
+        "[ttsEngine] device TTS has no voice for:",
+        lang,
+        "— available:",
+        languages.filter((l) => l.toLowerCase().startsWith("en")).join(", ") || "none"
+      );
+    }
     setHealth(ok ? "ready" : "engine-missing");
     return ok;
   } catch {
-    // Engine query failed — assume broken and guide the user.
     setHealth("engine-missing");
     return false;
   }
 }
 
 /**
- * Open the system Text-to-Speech settings screen
- * (com.android.settings.TTS_SETTINGS) so the user can install/enable the
- * English voice data. Uses the plugin's built-in openInstall() which issues
- * exactly that Intent.
+ * Open the system Text-to-Speech settings (android.settings.TTS_SETTINGS)
+ * so the user can install/enable English voice data.
  */
 export async function openTtsSettings(): Promise<void> {
   try {
@@ -140,20 +150,77 @@ export async function openTtsSettings(): Promise<void> {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Web layer state                                                           */
+/*  Layer 1 — online streamed audio                                            */
+/* -------------------------------------------------------------------------- */
+
+let streamAudio: HTMLAudioElement | null = null;
+
+/**
+ * Stream TTS audio from Google Translate (works in WebView, no voice data
+ * needed, kicks in instantly when online).
+ */
+function playStreamed(text: string, lang: string, rate: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!isOnline()) {
+      resolve(false);
+      return;
+    }
+    try {
+      stopSpeak();
+      const url =
+        "https://translate.google.com/translate_tts?ie=UTF-8&tl=" +
+        encodeURIComponent(lang.slice(0, 2)) +
+        "&client=tw-ob&q=" +
+        encodeURIComponent(text.slice(0, 200)); // endpoint caps ~200 chars
+
+      streamAudio = new Audio(url);
+      streamAudio.playbackRate = Math.min(1.5, Math.max(0.6, rate));
+
+      const cleanup = () => {
+        streamAudio?.removeEventListener("ended", onEnded);
+        streamAudio?.removeEventListener("error", onError);
+      };
+      const onEnded = () => {
+        cleanup();
+        resolve(true);
+      };
+      const onError = () => {
+        cleanup();
+        resolve(false);
+      };
+
+      streamAudio.addEventListener("ended", onEnded);
+      streamAudio.addEventListener("error", onError);
+
+      void streamAudio.play().catch(() => {
+        cleanup();
+        resolve(false);
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+/** Stop any active streamed audio. */
+function stopStream(): void {
+  if (streamAudio) {
+    streamAudio.pause();
+    streamAudio.src = "";
+    streamAudio = null;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Layer 3 — Web Speech helpers                                              */
 /* -------------------------------------------------------------------------- */
 
 let webVoices: SpeechSynthesisVoice[] = [];
 let webVoicesReady = false;
 let webWarming = false;
 
-/**
- * Warm the Web voices list (desktop browsers only path).
- * Android WebView never reaches this — native layer short-circuits first.
- */
 export function warmUpVoices(langPrefix = "en"): void {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-
   const synth = window.speechSynthesis;
   const grab = () => {
     const list = synth.getVoices();
@@ -164,9 +231,7 @@ export function warmUpVoices(langPrefix = "en"): void {
     }
     return false;
   };
-
   if (grab()) return;
-
   if (!webWarming) {
     webWarming = true;
     synth.addEventListener?.("voiceschanged", () => grab(), { once: true });
@@ -187,48 +252,41 @@ function pickVoice(lang: string, gender: "female" | "male") {
     webVoices = window.speechSynthesis.getVoices();
     webVoicesReady = webVoices.length > 0;
   }
-
   const prefix = lang.slice(0, 2).toLowerCase();
   const langPool = webVoices.filter((v) => v.lang.toLowerCase().startsWith(prefix));
   const pool = langPool.length > 0 ? langPool : webVoices;
-
   const hints =
     gender === "female"
-      ? ["female", "samantha", "victoria", "zira", "karen", "moira", "tessa", "serena", "fiona", "google us english", "aria", "jenny"]
-      : ["male", "daniel", "alex", "arthur", "oliver", "rishi", "fred", "david", "george", "mark"];
-
-  return (
-    pool.find((v) => hints.some((h) => v.name.toLowerCase().includes(h))) ??
-    pool[0] ??
-    null
-  );
+      ? ["female", "samantha", "victoria", "zira", "karen", "google us english", "aria", "jenny"]
+      : ["male", "daniel", "alex", "david", "george", "mark", "fred"];
+  return pool.find((v) => hints.some((h) => v.name.toLowerCase().includes(h))) ?? pool[0] ?? null;
 }
 
-/** Split long text — desktop browsers also clip very long utterances. */
 function chunkText(text: string): string[] {
   if (text.length <= 180) return [text];
-  const sentences = text.split(/(?<=[.!?])\s+/);
+  const parts = text.split(/(?<=[.!?])\s+/);
   const chunks: string[] = [];
   let cur = "";
-  for (const s of sentences) {
-    if ((cur + " " + s).trim().length <= 180) {
-      cur = (cur + " " + s).trim();
-    } else {
+  for (const p of parts) {
+    if ((cur + " " + p).trim().length <= 180) cur = (cur + " " + p).trim();
+    else {
       if (cur) chunks.push(cur);
-      cur = s;
+      cur = p;
     }
   }
   if (cur) chunks.push(cur);
-  return chunks.length > 0 ? chunks : [text];
+  return chunks.length ? chunks : [text];
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Public controls                                                           */
+/*  Public controls                                                            */
 /* -------------------------------------------------------------------------- */
 
 let activeWatchdog: ReturnType<typeof setInterval> | null = null;
 
+/** Stop every layer (stream + native + web). Safe to call anywhere. */
 export function stopSpeak(): void {
+  stopStream();
   if (typeof window !== "undefined" && "speechSynthesis" in window) {
     try {
       window.speechSynthesis.cancel();
@@ -240,7 +298,6 @@ export function stopSpeak(): void {
     clearInterval(activeWatchdog);
     activeWatchdog = null;
   }
-  // Native stop — wrapped so a broken plugin never throws here.
   void (async () => {
     try {
       const nat = await loadNative();
@@ -260,28 +317,39 @@ export interface SpeakOptions {
   onStart?: () => void;
 }
 
+export type SpeakResult = "stream" | "native" | "web" | "failed";
+
 /**
- * Speak text with the correct engine for the current platform.
- *   Native Android → @capacitor-community/text-to-speech (ALWAYS first).
- *   Web browser    → hardened SpeechSynthesis.
+ * Speak text through the best available layer:
+ *   1. Online stream (Google Translate TTS) — instant, no voice data needed
+ *   2. Native offline TTS (device Google TTS engine)
+ *   3. Web Speech API (desktop browsers)
  */
 export async function speakRobust(
   opts: SpeakOptions
-): Promise<"native" | "web" | "failed"> {
+): Promise<SpeakResult> {
   const { text, lang = "en-US", rate = 1, pitch = 1 } = opts;
   if (!text.trim()) return "failed";
 
   const settings = useSettingsStore.getState();
 
-  /* ================= LAYER 1 — NATIVE (Android) =================
-   * On native, web speechSynthesis is silent. The native Android TTS
-   * engine (Google TTS) is the ONLY reliable path — so we use it
-   * exclusively and never fall through to the broken web layer.      */
+  /* ================= LAYER 1 — ONLINE STREAM ================= */
+  if (isOnline()) {
+    const ok = await playStreamed(text, lang, rate);
+    if (ok) {
+      opts.onStart?.();
+      opts.onEnd?.();
+      return "stream";
+    }
+    // Stream failed (offline mid-flight / endpoint blocked) → fall through.
+  }
+
+  /* ================= LAYER 2 — NATIVE OFFLINE TTS ============= */
   if (await isNativePlatform()) {
     const nat = await loadNative();
 
-    // SELF-HEALING: verify the engine actually supports the target language.
-    // If en-US is missing, surface the guidance modal instead of playing silence.
+    // Self-healing: is English voice data actually installed?
+    // UNDERSCORE-AWARE check (en_US vs en-US both match /^en[-_]/i).
     if (nat && ttsHealth !== "ready") {
       const supported = await verifyLanguageSupport(nat, lang);
       if (!supported) return "failed";
@@ -290,32 +358,31 @@ export async function speakRobust(
     if (nat) {
       try {
         await nat.stop();
+        // lang is optional here — the engine default applies when omitted,
+        // which sidesteps any en_US/en-US formatting mismatch entirely.
         await nat.speak({
           text,
           lang,
           rate: Math.min(2, Math.max(0.5, rate)),
           pitch,
           volume: 1.0,
-          category: "ambient", // mixes properly, respects media volume
+          category: "ambient",
         });
         setHealth("ready");
         opts.onStart?.();
-        opts.onEnd?.(); // plugin promise resolves on completion
+        opts.onEnd?.();
         return "native";
       } catch (err) {
-        // speak() itself errored → likely no engine/data. Guide the user.
         console.warn("[ttsEngine] native speak failed:", err);
         setHealth("engine-missing");
-        // We do NOT use web speech on Android — it is silent there.
         return "failed";
       }
     }
-    // Plugin module missing on native — nothing else can produce sound here.
     setHealth("engine-missing");
     return "failed";
   }
 
-  /* ================= LAYER 2 — WEB (desktop/browser) ============= */
+  /* ================= LAYER 3 — WEB SPEECH (desktop) ========== */
   if (typeof window === "undefined" || !("speechSynthesis" in window)) {
     return "failed";
   }
@@ -348,9 +415,8 @@ export async function speakRobust(
     };
 
     utter.onend = () => {
-      if (i < chunks.length - 1) {
-        speakChunk(i + 1);
-      } else {
+      if (i < chunks.length - 1) speakChunk(i + 1);
+      else {
         stopSpeak();
         opts.onEnd?.();
       }

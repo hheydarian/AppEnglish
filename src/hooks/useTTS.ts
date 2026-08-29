@@ -29,7 +29,7 @@ export interface UseTTSOptions {
 export interface UseTTSReturn {
   /** Whether an utterance is currently being spoken. */
   isSpeaking: boolean;
-  /** Whether any TTS path is available (web speech OR native plugin). */
+  /** Whether any TTS path is available (stream / native / web speech). */
   isSupported: boolean;
   /** Speak the given text. Cancels any ongoing speech first. */
   speak: (text: string) => void;
@@ -38,15 +38,11 @@ export interface UseTTSReturn {
 }
 
 /**
- * Hook facade over RobustTTS.
+ * Hook facade over the HybridTTS engine (lib/ttsEngine.ts).
  *
- * Platform routing (decided inside lib/ttsEngine.ts):
- *   - Android/Capacitor → native TextToSpeech plugin (web layer skipped)
- *   - Desktop browser   → hardened Web SpeechSynthesis
- *
- * `isSupported` is true when EITHER path exists, so UI buttons never disable
- * themselves inside the Android WebView where web speech is absent but the
- * native engine works.
+ * `isSupported` is effectively always true on real devices because Layer 1
+ * (online stream) only needs an internet connection — so UI buttons never
+ * disable themselves on Android WebView.
  */
 export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
   const { lang = "en-US", rate = 1, pitch = 1, voiceGender } = options;
@@ -58,8 +54,7 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
     () => false
   );
 
-  // On native, TTS works even without web speechSynthesis — track it so the
-  // "isSupported" flag stays true inside the Android WebView.
+  // Track native availability so isSupported stays true inside the WebView.
   const [nativeReady, setNativeReady] = useState(false);
   useEffect(() => {
     let cancelled = false;
@@ -76,21 +71,25 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
     };
   }, []);
 
+  // Prime the web voice cache for the desktop fallback layer.
   const resolvedVoice = useMemo(
     () => (voiceGender ? pickVoiceByGender(lang, voiceGender) : undefined),
     [lang, voiceGender]
   );
 
   useEffect(() => {
-    if (!webSupported && !nativeReady) return;
-    warmUpVoices(lang); // desktop only benefit; no-op on native
-    void resolvedVoice;
+    if (webSupported) {
+      warmUpVoices(lang);
+      void resolvedVoice;
+    }
     return () => {
       stopSpeak();
     };
-  }, [webSupported, nativeReady, lang, resolvedVoice]);
+  }, [webSupported, lang, resolvedVoice]);
 
-  const isSupported = webSupported || nativeReady;
+  // Stream + native layers mean playback is available whenever we're online,
+  // even if web speech is missing inside the Android WebView.
+  const isSupported = webSupported || nativeReady || true;
 
   const speak = useCallback(
     (text: string) => {
